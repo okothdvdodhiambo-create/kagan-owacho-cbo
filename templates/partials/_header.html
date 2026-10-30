@@ -1,0 +1,60 @@
+{% load static koc_tags %}
+<header class="koco-header">
+  <div class="container koco-header-inner">
+    <a class="koco-brand" href="{% url 'core:home' %}">
+      {% if SITE.logo %}
+        <img class="koco-logo" src="{{ SITE.logo.url }}" alt="{{ SITE.organization_name }} logo">
+      {% else %}
+        <span class="koco-logo-mark" aria-hidden="true">{{ SITE.organization_name|initials }}</span>
+      {% endif %}
+      <span>
+        <span class="d-block koco-brand-name">{{ SITE.organization_name }}</span>
+        {% if SITE.motto %}<span class="d-block koco-brand-motto">{{ SITE.motto }}</span>{% endif %}
+      </span>
+    </a>
+
+    <div class="koco-user">
+      {% if user.is_authenticated %}
+        <div class="dropdown">
+          <button class="koco-user-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            {% if user.photo %}
+              <img class="koco-avatar" src="{{ user.photo.url }}" alt="{{ user.name }}">
+            {% else %}
+              <span class="koco-avatar">{{ user.name|initials }}</span>
+            {% endif %}
+            <span class="d-none d-sm-inline fw-semibold">{{ user.get_short_name }}</span>
+            <span class="caret">&#9662;</span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end koco-dropdown">
+            <li class="dropdown-header">{{ user.email }}</li>
+            {% if user.membership and user.membership.verified %}
+              <li><a class="dropdown-item" href="{% url 'membership:dashboard' %}"><i class="fa fa-gauge-high me-2 text-gold"></i>My dashboard</a></li>
+            {% elif user.membership %}
+              <li><a class="dropdown-item" href="{% url 'membership:pending' %}"><i class="fa fa-hourglass-half me-2 text-gold"></i>Finish verification</a></li>
+            {% else %}
+              <li><a class="dropdown-item" href="{% url 'membership:register' %}"><i class="fa fa-id-card me-2 text-gold"></i>Register as a member</a></li>
+            {% endif %}
+            <li><a class="dropdown-item" href="{% url 'accounts:profile' %}"><i class="fa fa-user-pen me-2 text-gold"></i>Edit profile</a></li>
+            <li><a class="dropdown-item" href="{% url 'accounts:password_change' %}"><i class="fa fa-key me-2 text-gold"></i>Change password</a></li>
+            {% if user.is_administrator %}
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item fw-semibold" href="{% url 'admin_panel:dashboard' %}"><i class="fa fa-shield-halved me-2 text-leaf"></i>Admin dashboard</a></li>
+            {% endif %}
+            <li><hr class="dropdown-divider"></li>
+            <li>
+              <form method="post" action="{% url 'accounts:logout' %}" class="px-1">
+                {% csrf_token %}
+                <button type="submit" class="dropdown-item text-danger"><i class="fa fa-right-from-bracket me-2"></i>Log out</button>
+              </form>
+            </li>
+          </ul>
+        </div>
+      {% else %}
+        <div class="koco-guest-actions">
+          <a class="koco-btn koco-btn-ghost koco-btn-sm" href="{% url 'accounts:login' %}"><i class="fa fa-right-to-bracket"></i> Log in</a>
+          <a class="koco-btn koco-btn-gold koco-btn-sm" href="{% url 'accounts:signup' %}"><i class="fa fa-user-plus"></i> Create account</a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</header>

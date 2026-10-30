@@ -1,0 +1,1 @@
+{{ org_name }}: welcome! Membership {{ membership_no }} for {{ member.full_name }} is now Active. Log in on the website to contribute and view your transcript.

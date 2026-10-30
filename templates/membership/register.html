@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <div class="koco-card">
+      <div class="koco-card-flat">
+        <h1 class="koco-section-title mb-1">Register as a Member</h1>
+        <p class="koco-muted mb-0">
+          Fill the form below. We send a 6-digit code to confirm the number and email belong to you,
+          then your membership is created with a number like <strong>KOC-0001</strong>.
+        </p>
+      </div>
+
+      {% if logged_in_membership and not logged_in_membership.verified %}
+        <div class="px-4 pt-3">
+          <div class="koco-note">
+            You already started with <strong>{{ logged_in_membership.email }}</strong>.
+            Sending this form again issues a fresh code for the same record.
+          </div>
+        </div>
+      {% endif %}
+
+      <div class="koco-card-flat">
+        <form method="post" class="koco-form" novalidate>
+          {% csrf_token %}
+          {% include "partials/_form_fields.html" %}
+          <div class="d-flex flex-wrap gap-2 align-items-center mt-2">
+            <button class="koco-btn koco-btn-primary" type="submit">
+              <i class="fa fa-paper-plane"></i> Send me the code
+            </button>
+            <a class="koco-btn koco-btn-ghost" href="{% url 'core:home' %}">Cancel</a>
+            <span class="small-muted ms-auto">Fields marked <span class="required-mark">*</span> are required.</span>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="koco-card mt-3">
+      <div class="koco-card-flat">
+        <h2 class="h6 mb-2"><i class="fa fa-circle-info koco-green"></i> What happens next</h2>
+        <ol class="mb-0 ps-3 small-muted">
+          <li>We send a 6-digit code by the channel you chose. It stays valid for 10 minutes and 5 tries.</li>
+          <li>You type the code on the next page. Missed it? Use <em>Send the code again</em>.</li>
+          <li>Your membership becomes Active and a confirmation goes to your phone and email.</li>
+          <li>If you do not have a login password yet, we email you a link to set one.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

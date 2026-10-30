@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8 col-lg-6">
+    <div class="koco-card">
+      <div class="koco-card-flat text-center">
+        <div class="koco-logo-mark mx-auto mb-3"><i class="fa fa-mobile-screen-button"></i></div>
+        <h1 class="koco-section-title mb-1">Enter your 6-digit code</h1>
+        <p class="koco-muted mb-0">
+          Sent to <strong>{{ member.phone }}</strong>
+          {% if member.verification_channel != 'sms' %} and <strong>{{ member.email }}</strong>{% endif %}.
+          The code works for 10 minutes.
+        </p>
+      </div>
+
+      <div class="koco-card-flat">
+        <form method="post" class="koco-form" novalidate>
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label" for="{{ form.code.id_for_label }}">6-digit code</label>
+            {{ form.code }}
+            {% for error in form.code.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+          </div>
+          <button class="koco-btn koco-btn-primary w-100" type="submit">
+            <i class="fa fa-circle-check"></i> Confirm my membership
+          </button>
+        </form>
+
+        <div class="koco-divider"></div>
+
+        <div data-cooldown-seconds="{{ cooldown_seconds|default:0 }}">
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="resend" value="1">
+            <button class="koco-btn koco-btn-outline w-100" type="submit" data-original-label="Send the code again">
+              <i class="fa fa-rotate"></i> Send the code again
+            </button>
+          </form>
+          <p class="small-muted mt-2 mb-0" data-cooldown-label></p>
+        </div>
+
+        {% if code %}
+          <p class="small-muted mt-3 mb-0 text-center">
+            {{ code.attempts }} of 5 wrong tries used &middot;
+            expires {{ code.expires_at|date:"d M Y, H:i" }} EAT
+          </p>
+        {% endif %}
+        <p class="small-muted mt-2 mb-0 text-center">
+          Wrong number or email? <a href="{% url 'membership:register' %}">Edit your details</a> and resend.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

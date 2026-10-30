@@ -1,0 +1,123 @@
+{% extends "admin_panel/base_admin.html" %}
+{% load koc_tags %}
+
+{% block admin_content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <div>
+    <h1 class="koco-section-title mb-1">Registered members</h1>
+    <p class="koco-muted mb-0">
+      {{ members.paginator.count }} member{{ members.paginator.count|pluralize }} match this search &middot;
+      they have given KSh {{ total_value|money }} in confirmed contributions.
+    </p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a class="koco-btn koco-btn-outline koco-btn-sm" href="{% keep_query export='csv' %}">
+      <i class="fa fa-file-csv"></i> Export CSV
+    </a>
+    <a class="koco-btn koco-btn-outline koco-btn-sm" href="{% keep_query export='xlsx' %}">
+      <i class="fa fa-file-excel"></i> Export Excel
+    </a>
+  </div>
+</div>
+
+<div class="koco-card mb-3">
+  <div class="koco-card-flat">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label small-muted" for="q">Search</label>
+        <input class="form-control form-control-sm" id="q" type="search" name="q" value="{{ search }}"
+               placeholder="Name, email, phone, KOC number or location">
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label small-muted" for="status">Status</label>
+        <select class="form-select form-select-sm" id="status" name="status">
+          <option value="">Any</option>
+          {% for value, label in statuses %}
+            <option value="{{ value }}" {% if value == selected_status %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label small-muted" for="role">Role</label>
+        <select class="form-select form-select-sm" id="role" name="role">
+          <option value="">Any</option>
+          {% for option in roles %}
+            <option value="{{ option.label }}" {% if option.label == selected_role %}selected{% endif %}>{{ option.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label small-muted" for="gender">Gender</label>
+        <select class="form-select form-select-sm" id="gender" name="gender">
+          <option value="">Any</option>
+          {% for option in genders %}
+            <option value="{{ option.label }}" {% if option.label == selected_gender %}selected{% endif %}>{{ option.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <button class="koco-btn koco-btn-primary koco-btn-sm w-100" type="submit"><i class="fa fa-magnifying-glass"></i> Filter</button>
+      </div>
+    </form>
+    {% if search or selected_status or selected_role or selected_gender %}
+      <p class="small-muted mt-2 mb-0">
+        <a href="{% url 'admin_panel:member_list' %}"><i class="fa fa-xmark"></i> Clear all filters</a>
+      </p>
+    {% endif %}
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th scope="col">Member</th>
+          <th scope="col">Contact</th>
+          <th scope="col">Role</th>
+          <th scope="col">Location</th>
+          <th scope="col">Joined</th>
+          <th scope="col">Status</th>
+          <th scope="col" class="text-end">Given (KSh)</th>
+          <th scope="col"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for member in members %}
+          <tr>
+            <td>
+              <a class="fw-semibold text-decoration-none" href="{% url 'admin_panel:member_detail' member.pk %}">{{ member.full_name }}</a>
+              <div class="small-muted">{{ member.membership_no|default:"no number yet" }}</div>
+            </td>
+            <td>
+              {{ member.phone }}
+              <div class="small-muted">{{ member.email }}</div>
+            </td>
+            <td>{{ member.role|default:"-" }}<div class="small-muted">{{ member.gender }}</div></td>
+            <td>{{ member.location }}<div class="small-muted">{{ member.sub_location }}</div></td>
+            <td>{{ member.created_at|date:"d M Y" }}</td>
+            <td>
+              <span class="badge text-bg-{% if member.status == 'active' %}success{% elif member.status == 'suspended' %}danger{% else %}warning text-dark{% endif %}">
+                {{ member.get_status_display }}
+              </span>
+            </td>
+            <td class="text-end">{{ member.total_given|money }}</td>
+            <td class="text-end">
+              <a class="koco-btn koco-btn-outline koco-btn-sm" href="{% url 'admin_panel:member_detail' member.pk %}">Open</a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="8">
+              <div class="koco-empty">
+                <i class="fa fa-user-slash"></i>
+                No member matches this search. Try clearing the filters.
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% include "partials/_pagination.html" with page_obj=members %}
+{% endblock %}

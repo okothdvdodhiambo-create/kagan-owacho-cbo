@@ -1,0 +1,81 @@
+{% extends "admin_panel/base_admin.html" %}
+
+{% block admin_content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <div>
+    <h1 class="koco-section-title mb-1">Send email or SMS</h1>
+    <p class="koco-muted mb-0">
+      {{ members_total }} verified member{{ members_total|pluralize }} will receive a message sent to "All verified members".
+    </p>
+  </div>
+  <a class="koco-btn koco-btn-primary" href="{% url 'admin_panel:campaign_create' %}">
+    <i class="fa fa-plus"></i> New announcement
+  </a>
+</div>
+
+<div class="koco-card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Subject</th>
+          <th>Audience</th>
+          <th>Emails</th>
+          <th>SMS</th>
+          <th>Status</th>
+          <th>Sent</th>
+          <th>By</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for campaign in campaigns %}
+          <tr>
+            <td>
+              <strong>{{ campaign.subject }}</strong>
+              <div class="small-muted">{{ campaign.message|truncatewords:18 }}</div>
+              {% if campaign.error_note %}<div class="small text-danger mt-1">{{ campaign.error_note }}</div>{% endif %}
+            </td>
+            <td>
+              {{ campaign.get_audience_display }}
+              {% if campaign.audience == 'selected' %}<div class="small-muted">{{ campaign.members.count }} chosen</div>{% endif %}
+            </td>
+            <td>{{ campaign.email_count }}</td>
+            <td>{{ campaign.sms_count }}</td>
+            <td>
+              <span class="badge text-bg-{% if campaign.status == 'sent' %}success{% else %}secondary{% endif %}">
+                {{ campaign.get_status_display }}
+              </span>
+            </td>
+            <td>{{ campaign.sent_at|date:"d M Y H:i"|default:"-" }}</td>
+            <td>
+              {% if campaign.created_by %}
+                {{ campaign.created_by.get_full_name|default:campaign.created_by.email }}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="7">
+              <div class="koco-empty">
+                <i class="fa fa-bullhorn"></i>
+                No announcements yet.
+                <div class="mt-3">
+                  <a class="koco-btn koco-btn-primary koco-btn-sm" href="{% url 'admin_panel:campaign_create' %}">Write the first one</a>
+                </div>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="koco-card-flat">
+    <p class="small-muted mb-0">
+      Delivery uses the SMTP and Africa's Talking settings in <code>.env</code>. Without them, messages are
+      written to the server console so you can still test the flow.
+    </p>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,170 @@
+{% extends "admin_panel/base_admin.html" %}
+{% load koc_tags %}
+
+{% block admin_content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item"><a href="{% url 'admin_panel:dashboard' %}">Admin</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'admin_panel:member_list' %}">Members</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ member.full_name }}</li>
+  </ol>
+</nav>
+
+<div class="koco-member-card mb-3">
+  <div class="row align-items-center g-3">
+    <div class="col">
+      <p class="label mb-1">Membership number</p>
+      <p class="value mb-1">{{ member.membership_no|default:"Not confirmed yet" }}</p>
+      <p class="mb-0">
+        {{ member.full_name }} &middot;
+        <span class="badge text-bg-{% if member.status == 'active' %}success{% elif member.status == 'suspended' %}danger{% else %}warning text-dark{% endif %}">
+          {{ member.get_status_display }}
+        </span>
+      </p>
+      <p class="small mb-0 opacity-75">{{ member.phone }} &middot; {{ member.email }}</p>
+    </div>
+    <div class="col-auto text-center">
+      {% if member.user and member.user.photo %}
+        <img class="koco-avatar" src="{{ member.user.photo.url }}" alt="{{ member.full_name }}">
+      {% else %}
+        <span class="koco-avatar">{{ member.full_name|initials }}</span>
+      {% endif %}
+      <div class="small mt-1">KSh {{ totals.confirmed_total|money }}<br>confirmed giving</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="koco-card">
+      <div class="koco-card-flat">
+        <h2 class="h6 mb-0">Edit the member record</h2>
+        <p class="small-muted">Correct spelling, phone or role here. Every save is written to the audit log.</p>
+        <form method="post" class="koco-form" novalidate>
+          {% csrf_token %}
+          {% include "partials/_form_fields.html" %}
+          <button class="koco-btn koco-btn-primary" type="submit">
+            <i class="fa fa-floppy-disk"></i> Save changes
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="koco-card mt-3">
+      <div class="koco-card-flat d-flex justify-content-between align-items-center">
+        <h2 class="h6 mb-0">Contributions</h2>
+        <a class="small" href="{% url 'admin_panel:contribution_list' %}?member={{ member.membership_no }}">Full list</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead>
+            <tr><th>Date</th><th>Method</th><th>Reference</th><th class="text-end">KSh</th><th>Status</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for row in contributions %}
+              <tr>
+                <td>{{ row.created_at|date:"d M Y" }}</td>
+                <td>{{ row.get_method_display }}</td>
+                <td>{{ row.reference|default:"-" }}</td>
+                <td class="text-end">{{ row.amount|money }}</td>
+                <td>{{ row.get_status_display }}</td>
+                <td class="text-end">
+                  {% if row.status == 'pending' %}
+                    <a class="koco-btn koco-btn-outline koco-btn-sm" href="{% url 'admin_panel:contribution_decide' row.pk %}">Verify</a>
+                  {% endif %}
+                </td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="6" class="koco-muted">No contributions from this member yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="koco-card mt-3">
+      <div class="koco-card-flat">
+        <h2 class="h6">Incident reports from this member</h2>
+        {% for incident in incidents %}
+          <div class="d-flex justify-content-between align-items-start border-bottom py-2">
+            <div>
+              <a class="fw-semibold text-decoration-none" href="{% url 'admin_panel:incident_detail' incident.pk %}">{{ incident.title }}</a>
+              <div class="small-muted">happened {{ incident.occurred_on|date:"d M Y" }}</div>
+            </div>
+            <span class="badge text-bg-{{ incident.status_css }}">{{ incident.get_status_display }}</span>
+          </div>
+        {% empty %}
+          <p class="koco-muted mb-0">Nothing reported.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="koco-card">
+      <div class="koco-card-flat">
+        <h2 class="h6">Account &amp; access</h2>
+        <p class="small-muted mb-2">
+          {% if account %}
+            Login account: <strong>{{ account.email }}</strong><br>
+            Password set: {{ account.has_usable_password|yesno:"yes,no" }}<br>
+            Verified: {{ member.verified|yesno:"yes,no" }}
+            {% if member.verified_at %} on {{ member.verified_at|date:"d M Y" }}{% endif %}
+          {% else %}
+            This member has no login account yet. Use "Send a new password link" to create one.
+          {% endif %}
+        </p>
+        <form method="post" class="mb-2">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="reset_access">
+          <button class="koco-btn koco-btn-outline koco-btn-sm w-100" type="submit">
+            <i class="fa fa-envelope-circle-check"></i> Send a new password link
+          </button>
+        </form>
+        <p class="small-muted">
+          The member receives an email with a one-time link to choose their own password. Nothing is ever
+          stored in plain text.
+        </p>
+      </div>
+      <div class="koco-card-flat">
+        <h2 class="h6">Change membership status</h2>
+        {% if member.status == 'active' %}
+          <form method="post" data-confirm="Suspend {{ member.full_name }}? They keep their records but cannot use the member area.">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="suspend">
+            <button class="koco-btn koco-btn-outline koco-btn-sm w-100" type="submit">
+              <i class="fa fa-ban"></i> Suspend membership
+            </button>
+          </form>
+        {% else %}
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="activate">
+            <button class="koco-btn koco-btn-primary koco-btn-sm w-100" type="submit">
+              <i class="fa fa-circle-check"></i> Mark active
+            </button>
+          </form>
+        {% endif %}
+      </div>
+      <div class="koco-card-flat">
+        <h2 class="h6 text-danger">Delete this member</h2>
+        <p class="small-muted">
+          Removes the member, their contributions, incidents and codes. Their login account stays so the
+          email can be reused. Tick the box to confirm.
+        </p>
+        <form method="post" data-confirm="Delete {{ member.full_name }} and all their records? This cannot be undone.">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="delete">
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" name="confirm" value="yes" id="confirmDelete">
+            <label class="form-check-label small" for="confirmDelete">I am sure: delete this member permanently.</label>
+          </div>
+          <button class="koco-btn koco-btn-outline koco-btn-sm w-100 text-danger" type="submit">
+            <i class="fa fa-trash"></i> Delete member
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

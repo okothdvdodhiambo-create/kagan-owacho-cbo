@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb small">
+        <li class="breadcrumb-item"><a href="{% url 'events:list' %}">Events Sponsored</a></li>
+        <li class="breadcrumb-item"><a href="{{ report.event.get_absolute_url }}">{{ report.event.title }}</a></li>
+        <li class="breadcrumb-item active" aria-current="page">{{ report.title }}</li>
+      </ol>
+    </nav>
+
+    <div class="koco-card">
+      <div class="koco-card-flat">
+        <p class="label small-muted mb-1">Report &middot; {{ report.created_at|date:"d M Y" }}</p>
+        <h1 class="koco-section-title mb-1">{{ report.title }}</h1>
+        <p class="koco-muted mb-0">
+          {{ report.event.title }} &middot; {{ report.event.date_line }} EAT &middot; {{ report.event.venue }}
+        </p>
+      </div>
+
+      {% with photo=report.photos.first %}
+        {% if photo %}
+          <img class="img-fluid rounded-0" src="{{ photo.image.url }}" alt="{{ photo.caption|default:report.title }}">
+        {% endif %}
+      {% endwith %}
+
+      <div class="koco-card-flat">
+        {% for paragraph in report.body_paragraphs %}
+          <p>{{ paragraph|linebreaksbr }}</p>
+        {% endfor %}
+      </div>
+
+      {% if report.photos.count > 1 %}
+        <div class="koco-card-flat">
+          <h2 class="h6">Photos from the day</h2>
+          <div class="row g-2">
+            {% for photo in report.photos.all %}
+              <div class="col-6 col-md-3">
+                <img class="img-fluid rounded-3" src="{{ photo.image.url }}" alt="{{ photo.caption|default:report.title }}">
+                {% if photo.caption %}<p class="small-muted mt-1 mb-0">{{ photo.caption }}</p>{% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+
+      <div class="koco-card-flat d-flex flex-wrap gap-2">
+        <a class="koco-btn koco-btn-outline" href="{{ report.event.get_absolute_url }}">
+          <i class="fa fa-arrow-left"></i> Back to the event
+        </a>
+        <a class="koco-btn koco-btn-ghost" href="{% url 'events:list' %}">All sponsored events</a>
+      </div>
+    </div>
+
+    <p class="small-muted mt-3">
+      Written by
+      {% if report.created_by %}
+        {{ report.created_by.get_full_name|default:report.created_by.email }}.
+      {% else %}
+        the committee.
+      {% endif %}
+      Questions? <a href="{{ SITE.whatsapp_url }}" target="_blank" rel="noopener">WhatsApp the office</a>.
+    </p>
+  </div>
+</div>
+{% endblock %}

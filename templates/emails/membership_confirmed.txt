@@ -1,0 +1,16 @@
+Hello {{ member.full_name }},
+
+Your membership of {{ org_name }} is now Active.
+
+Membership number: {{ membership_no }}
+Full name: {{ member.full_name }}
+Phone: {{ member.phone }}
+Email: {{ member.email }}
+Role: {{ member.role|default:"-" }}
+Location: {{ member.location }}{% if member.sub_location %}, {{ member.sub_location }}{% endif %}
+
+Thank you for standing with us to keep children in school. Log in to the website to send a
+contribution, download your contribution statement, and follow the events we sponsor.
+
+{{ org_name }}
+Kagan Ward, Rangwe Constituency, Homa Bay County

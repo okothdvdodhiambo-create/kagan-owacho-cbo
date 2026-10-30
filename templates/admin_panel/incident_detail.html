@@ -1,0 +1,102 @@
+{% extends "admin_panel/base_admin.html" %}
+
+{% block admin_content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item"><a href="{% url 'admin_panel:incident_list' %}">Incidents</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ incident.title }}</li>
+  </ol>
+</nav>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="koco-card">
+      <div class="koco-card-flat">
+        <div class="d-flex justify-content-between align-items-start gap-2">
+          <h1 class="koco-section-title mb-0">{{ incident.title }}</h1>
+          <span class="badge text-bg-{{ incident.status_css }} text-nowrap">{{ incident.get_status_display }}</span>
+        </div>
+        <p class="small-muted mb-0 mt-1">
+          {{ incident.member.full_name }} ({{ incident.member.membership_no }}) &middot;
+          <a href="tel:{{ incident.member.phone }}">{{ incident.member.phone }}</a> &middot;
+          <a href="mailto:{{ incident.member.email }}">{{ incident.member.email }}</a><br>
+          Happened {{ incident.occurred_on|date:"d M Y" }} &middot; sent {{ incident.created_at|date:"d M Y H:i" }}
+        </p>
+      </div>
+      <div class="koco-card-flat">
+        <h2 class="h6">What the member wrote</h2>
+        {{ incident.description|linebreaks }}
+        {% if incident.attachment %}
+          <a class="koco-btn koco-btn-outline koco-btn-sm" href="{{ incident.attachment.url }}" target="_blank" rel="noopener">
+            <i class="fa fa-paperclip"></i> Open the attachment
+          </a>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="koco-card mt-3">
+      <div class="koco-card-flat">
+        <h2 class="h6">Conversation</h2>
+        {% for response in incident.responses.all %}
+          <div class="border rounded-3 p-3 mb-2">
+            <p class="small-muted mb-1">
+              {{ response.created_at|date:"d M Y H:i" }} &middot;
+              {% if response.author %}{{ response.author.get_full_name|default:response.author.email }}{% else %}Admin{% endif %}
+              {% if not response.notify_member %}<span class="badge text-bg-secondary">internal note</span>{% endif %}
+            </p>
+            {{ response.body|linebreaks }}
+          </div>
+        {% empty %}
+          <p class="koco-muted mb-0">Nothing sent back yet. Write the first reply below.</p>
+        {% endfor %}
+      </div>
+      <div class="koco-card-flat">
+        <h2 class="h6">Reply to the member</h2>
+        <form method="post" class="koco-form" novalidate>
+          {% csrf_token %}
+          <input type="hidden" name="form" value="reply">
+          {% include "partials/_form_fields.html" with form=reply_form %}
+          <button class="koco-btn koco-btn-primary" type="submit">
+            <i class="fa fa-reply"></i> Save reply
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="koco-card h-100">
+      <div class="koco-card-flat">
+        <h2 class="h6">Move the report along</h2>
+        <p class="small-muted">
+          "Under review" tells the member someone is acting on it. Close it once the family or issue is settled.
+        </p>
+        <form method="post" class="koco-form" novalidate>
+          {% csrf_token %}
+          <input type="hidden" name="form" value="status">
+          {% include "partials/_form_fields.html" with form=status_form %}
+          <button class="koco-btn koco-btn-outline w-100" type="submit">
+            <i class="fa fa-floppy-disk"></i> Update status
+          </button>
+        </form>
+      </div>
+      <div class="koco-card-flat">
+        <h2 class="h6">Shortcuts</h2>
+        <div class="d-grid gap-2">
+          <a class="koco-btn koco-btn-outline koco-btn-sm" href="{% url 'admin_panel:member_detail' incident.member.pk %}">
+            <i class="fa fa-user"></i> Open the member record
+          </a>
+          <a class="koco-btn koco-btn-outline koco-btn-sm"
+             href="mailto:{{ incident.member.email }}?subject=Re:%20{{ incident.title|urlencode }}">
+            <i class="fa fa-envelope"></i> Email the member directly
+          </a>
+          <a class="koco-btn koco-btn-outline koco-btn-sm"
+             href="https://wa.me/{{ incident.member.phone|slice:'1:' }}" target="_blank" rel="noopener">
+            <i class="fa-brands fa-whatsapp"></i> WhatsApp {{ incident.member.phone }}
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

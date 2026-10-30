@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row g-4">
+  <div class="col-12">
+    <h1 class="page-title">About {{ SITE.organization_name }}</h1>
+    <p class="koco-lead">{{ SITE.motto }}</p>
+  </div>
+
+  <div class="col-12 col-lg-7">
+    <div class="koco-card mb-4">
+      <p class="koco-section-title"><i class="fa fa-bullseye me-1"></i> Our mission</p>
+      <p style="white-space: pre-line;">{{ SITE.about_mission|default:"The admin has not written the mission yet." }}</p>
+      <div class="koco-divider"></div>
+      <p class="koco-section-title"><i class="fa fa-eye me-1"></i> Our vision</p>
+      <p style="white-space: pre-line;">{{ SITE.about_vision|default:"The admin has not written the vision yet." }}</p>
+      <div class="koco-divider"></div>
+      <p class="koco-section-title"><i class="fa fa-clock-rotate-left me-1"></i> Our history</p>
+      <p style="white-space: pre-line;">{{ SITE.about_history|default:"The admin has not written the history yet." }}</p>
+      <div class="koco-divider"></div>
+      <p class="koco-section-title"><i class="fa fa-users me-1"></i> Leadership</p>
+      <p class="mb-0" style="white-space: pre-line;">{{ SITE.about_leadership|default:"The admin has not listed the leadership yet." }}</p>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-5">
+    {% if SITE.about_photo %}
+      <img class="koco-card p-0 w-100" style="height:280px; object-fit:cover;" src="{{ SITE.about_photo.url }}" alt="{{ SITE.organization_name }}">
+    {% endif %}
+    <div class="koco-card mt-3">
+      <p class="koco-section-title">How we work</p>
+      <ul class="mb-3 ps-3">
+        <li>Members pool contributions each term.</li>
+        <li>The treasurer pays school fees directly to schools and keeps receipts.</li>
+        <li>Every contribution and event is published so members can follow the money.</li>
+        <li>Anyone can report a problem through the dashboard; the committee responds.</li>
+      </ul>
+      <a class="koco-btn koco-btn-primary w-100 justify-content-center" href="{% url 'membership:register' %}">
+        <i class="fa fa-id-card"></i> Join as a member
+      </a>
+      <a class="koco-btn koco-btn-outline w-100 justify-content-center mt-2" href="{{ SITE.whatsapp_url }}" target="_blank" rel="noopener">
+        <i class="fa-brands fa-whatsapp"></i> Ask us something
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

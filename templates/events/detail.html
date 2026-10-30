@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item"><a href="{% url 'core:home' %}">Home</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'events:list' %}">Events Sponsored</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ event.title }}</li>
+  </ol>
+</nav>
+
+<div class="row g-4">
+  <div class="col-lg-7">
+    <h1 class="koco-section-title mb-1">{{ event.title }}</h1>
+    <p class="mb-3">
+      <span class="badge text-bg-light">{{ event.get_category_display }}</span>
+      {% if event.is_past %}
+        <span class="badge text-bg-secondary">Finished</span>
+      {% else %}
+        <span class="badge text-bg-success">Upcoming</span>
+      {% endif %}
+    </p>
+    {% if event.photo %}
+      <img class="img-fluid rounded-3 mb-3" src="{{ event.photo.url }}" alt="{{ event.title }}">
+    {% endif %}
+    <div class="koco-card">
+      <div class="koco-card-flat">
+        <h2 class="h6">About this event</h2>
+        {% if event.description %}
+          {{ event.description|linebreaks }}
+        {% else %}
+          <p class="koco-muted mb-0">The committee has not written a description yet.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="koco-card">
+      <div class="koco-card-flat">
+        <h2 class="h6">When &amp; where</h2>
+        <p class="mb-1"><i class="fa fa-clock text-leaf"></i> {{ event.date_line }} EAT</p>
+        {% if event.ends_at %}
+          <p class="mb-1 small-muted">
+            Ends {{ event.ends_at|date:"D, d M Y H:i" }} EAT
+          </p>
+        {% endif %}
+        <p class="mb-0"><i class="fa fa-location-dot text-leaf"></i> {{ event.venue }}</p>
+      </div>
+      <div class="koco-card-flat">
+        <a class="koco-btn koco-btn-outline koco-btn-sm w-100" href="{{ SITE.whatsapp_url }}" target="_blank" rel="noopener">
+          <i class="fa-brands fa-whatsapp"></i> Ask us about this event
+        </a>
+        <a class="koco-btn koco-btn-ghost koco-btn-sm w-100 mt-2" href="{% url 'events:calendar' %}">
+          <i class="fa fa-calendar-days"></i> See the calendar
+        </a>
+      </div>
+    </div>
+
+    <div class="koco-card mt-3">
+      <div class="koco-card-flat">
+        <h2 class="h6">Reports from this event</h2>
+        {% for report in reports %}
+          <a class="d-block border-bottom py-2 text-decoration-none" href="{{ report.get_absolute_url }}">
+            <strong>{{ report.title }}</strong>
+            <span class="d-block small-muted">{{ report.created_at|date:"d M Y" }} &middot; {{ report.body|truncatewords:16 }}</span>
+          </a>
+        {% empty %}
+          <p class="koco-muted mb-0">No report written yet. The committee posts one after the event.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

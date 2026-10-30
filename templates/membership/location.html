@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="koco-shell">
+  {% include "partials/_member_side.html" %}
+
+  <div>
+    <div class="koco-card">
+      <div class="koco-card-flat">
+        <h1 class="koco-section-title mb-1">Where to find us</h1>
+        <p class="koco-muted mb-0">{{ site.location_label }}</p>
+        {% if site.postal_address %}<p class="small-muted mb-0">Postal: {{ site.postal_address }}</p>{% endif %}
+      </div>
+      <div class="koco-card-flat">
+        {% if site.map_embed_url %}
+          <iframe class="koco-map" src="{{ site.map_embed_url }}" title="{{ site.location_label }}"
+                  loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
+          <p class="small-muted mt-2 mb-0">
+            Not loading? <a href="https://www.google.com/maps/search/?api=1&amp;query={{ site.location_urlencode }}"
+                             target="_blank" rel="noopener">Open the map in Google Maps</a>.
+          </p>
+        {% else %}
+          <div class="koco-empty">
+            <i class="fa fa-map-location-dot"></i>
+            The map is not set up yet. Ask the admin to paste the map link in Site settings.
+            <div class="mt-3">
+              <a class="koco-btn koco-btn-outline koco-btn-sm"
+                 href="https://www.google.com/maps/search/?api=1&amp;query={{ site.location_urlencode }}"
+                 target="_blank" rel="noopener">Search {{ site.location_label }}</a>
+            </div>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="row g-3 mt-1">
+      <div class="col-md-6">
+        <div class="koco-card h-100">
+          <div class="koco-card-flat">
+            <h2 class="h6"><i class="fa-brands fa-whatsapp koco-green"></i> WhatsApp</h2>
+            <p class="mb-2">{{ site.whatsapp_number }}</p>
+            <a class="koco-btn koco-btn-outline koco-btn-sm" href="{{ site.whatsapp_url }}" target="_blank" rel="noopener">
+              Start a chat
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="koco-card h-100">
+          <div class="koco-card-flat">
+            <h2 class="h6"><i class="fa fa-envelope koco-green"></i> Email</h2>
+            <p class="mb-2">{{ site.contact_email }}</p>
+            <a class="koco-btn koco-btn-outline koco-btn-sm" href="{% url 'membership:contact' %}">Use the email form</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

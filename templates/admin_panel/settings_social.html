@@ -1,0 +1,53 @@
+{% extends "admin_panel/base_admin.html" %}
+
+{% block admin_content %}
+<h1 class="koco-section-title mb-1">Social media links</h1>
+<p class="koco-muted">These appear as icons in the footer on every page.</p>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="koco-card">
+      <div class="koco-card-flat"><h2 class="h6 mb-0">Current links</h2></div>
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead><tr><th>Network</th><th>Address</th><th>Order</th><th>Showing</th><th></th></tr></thead>
+          <tbody>
+            {% for link in links %}
+              <tr>
+                <td><i class="fa-brands fa-{{ link.icon }} text-leaf"></i> {{ link.get_platform_display }}</td>
+                <td><a href="{{ link.url }}" target="_blank" rel="noopener">{{ link.url|truncatechars:48 }}</a></td>
+                <td>{{ link.order }}</td>
+                <td>{{ link.active|yesno:"yes,no" }}</td>
+                <td class="text-end">
+                  <a class="koco-btn koco-btn-outline koco-btn-sm" href="{% url 'admin_panel:settings_social' %}?edit={{ link.pk }}">
+                    <i class="fa fa-pen"></i> Edit
+                  </a>
+                </td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="5"><div class="koco-empty"><i class="fa fa-share-nodes"></i> No social links yet.</div></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="koco-card h-100">
+      <div class="koco-card-flat"><h2 class="h6 mb-0">{% if editing %}Edit this link{% else %}Add a link{% endif %}</h2></div>
+      <div class="koco-card-flat">
+        <form method="post" class="koco-form" novalidate>
+          {% csrf_token %}
+          {% include "partials/_form_fields.html" %}
+          <button class="koco-btn koco-btn-primary w-100" type="submit"><i class="fa fa-floppy-disk"></i> Save link</button>
+        </form>
+        <p class="small-muted mt-2 mb-0">
+          Paste the full address starting with <code>https://</code>. To switch a network off, untick
+          "Showing" and save - inactive links stay in the list but disappear from the footer.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

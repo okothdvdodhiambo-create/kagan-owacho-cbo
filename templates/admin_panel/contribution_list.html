@@ -1,0 +1,123 @@
+{% extends "admin_panel/base_admin.html" %}
+{% load koc_tags %}
+
+{% block admin_content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <div>
+    <h1 class="koco-section-title mb-1">Contributions</h1>
+    <p class="koco-muted mb-0">
+      This filter holds KSh {{ filtered_total|money }} &middot; all confirmed money is KSh {{ confirmed_total|money }}.
+    </p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a class="koco-btn koco-btn-outline koco-btn-sm" href="{% keep_query export='csv' %}"><i class="fa fa-file-csv"></i> CSV</a>
+    <a class="koco-btn koco-btn-outline koco-btn-sm" href="{% keep_query export='xlsx' %}"><i class="fa fa-file-excel"></i> Excel</a>
+  </div>
+</div>
+
+<div class="koco-card mb-3">
+  <div class="koco-card-flat">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label small-muted" for="status">Status</label>
+        <select class="form-select form-select-sm" id="status" name="status">
+          <option value="">Any</option>
+          {% for value, label in statuses %}
+            <option value="{{ value }}" {% if value == selected_status %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small-muted" for="method">Method</label>
+        <select class="form-select form-select-sm" id="method" name="method">
+          <option value="">Any</option>
+          {% for value, label in methods %}
+            <option value="{{ value }}" {% if value == selected_method %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small-muted" for="member">Member</label>
+        <input class="form-control form-control-sm" id="member" type="search" name="member" value="{{ member_q }}"
+               placeholder="Name or KOC number">
+      </div>
+      <div class="col-6 col-md-2">
+        <label class="form-label small-muted" for="from">From</label>
+        <input class="form-control form-control-sm" id="from" type="date" name="from" value="{{ date_from }}">
+      </div>
+      <div class="col-6 col-md-1 d-grid">
+        <button class="koco-btn koco-btn-primary koco-btn-sm" type="submit"><i class="fa fa-filter"></i></button>
+      </div>
+    </form>
+    <p class="small-muted mt-2 mb-0">
+      <a href="{% url 'admin_panel:contribution_list' %}?status=pending">Only awaiting verification</a> &middot;
+      <a href="{% url 'admin_panel:contribution_list' %}?method=mpesa_stk">Only M-Pesa online</a> &middot;
+      <a href="{% url 'admin_panel:contribution_list' %}">Clear</a>
+    </p>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Member</th>
+          <th>Date</th>
+          <th>Method</th>
+          <th>Reference</th>
+          <th class="text-end">KSh</th>
+          <th>Status</th>
+          <th>Checked by</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in contributions %}
+          <tr>
+            <td>
+              <a class="fw-semibold text-decoration-none" href="{% url 'admin_panel:member_detail' row.member.pk %}">{{ row.member.full_name }}</a>
+              <div class="small-muted">{{ row.member.membership_no }}</div>
+            </td>
+            <td>{{ row.created_at|date:"d M Y H:i" }}</td>
+            <td>{{ row.get_method_display }}</td>
+            <td>
+              {% if row.reference %}<span class="font-monospace">{{ row.reference }}</span>{% else %}<span class="small-muted">-</span>{% endif %}
+              {% if row.transaction_id %}<div class="small-muted">MPESA {{ row.transaction_id }}</div>{% endif %}
+            </td>
+            <td class="text-end"><strong>{{ row.amount|money }}</strong></td>
+            <td>
+              <span class="badge text-bg-{% if row.status == 'confirmed' %}success{% elif row.status == 'rejected' or row.status == 'failed' %}danger{% elif row.status == 'cancelled' %}secondary{% else %}warning text-dark{% endif %}">
+                {{ row.get_status_display }}
+              </span>
+              {% if row.result_message %}<div class="small-muted">{{ row.result_message }}</div>{% endif %}
+            </td>
+            <td>
+              {% if row.verified_by %}
+                {{ row.verified_by.get_full_name|default:row.verified_by.email }}
+                <div class="small-muted">{{ row.verified_at|date:"d M Y H:i" }}</div>
+              {% else %}
+                <span class="small-muted">-</span>
+              {% endif %}
+            </td>
+            <td class="text-end text-nowrap">
+              {% if row.receipt %}
+                <a class="koco-btn koco-btn-outline koco-btn-sm" href="{{ row.receipt.url }}" target="_blank" rel="noopener"><i class="fa fa-image"></i></a>
+              {% endif %}
+              {% if row.status == 'pending' or row.status == 'waiting' %}
+                <a class="koco-btn koco-btn-primary koco-btn-sm" href="{% url 'admin_panel:contribution_decide' row.pk %}">Verify</a>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="8">
+              <div class="koco-empty"><i class="fa fa-coins"></i> No contribution matches this filter.</div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% include "partials/_pagination.html" with page_obj=contributions %}
+{% endblock %}

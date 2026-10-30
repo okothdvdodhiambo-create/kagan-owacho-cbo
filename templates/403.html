@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="koco-card text-center py-5">
+  <i class="fa fa-lock fa-2x mb-3"></i>
+  <h1 class="h3">This area is for the committee</h1>
+  <p class="mb-1">You are logged in as <strong>{{ user.get_short_name|default:user.email }}</strong>, which is a member account. Member accounts cannot open the admin pages.</p>
+  {% if user.is_authenticated %}
+    <p class="small-muted mb-4">If you are an administrator, log out and log in with the admin email address.</p>
+  {% else %}
+    <p class="small-muted mb-4">Please log in with an account that has access.</p>
+  {% endif %}
+  <div class="d-flex flex-wrap gap-2 justify-content-center">
+    <a class="koco-btn koco-btn-primary" href="{% url 'core:home' %}"><i class="fa fa-house"></i> Back to the home page</a>
+    <a class="koco-btn koco-btn-outline" href="{% url 'membership:dashboard' %}"><i class="fa fa-id-card"></i> My member dashboard</a>
+  </div>
+</div>
+{% endblock %}

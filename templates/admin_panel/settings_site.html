@@ -1,0 +1,112 @@
+{% extends "admin_panel/base_admin.html" %}
+{% load koc_tags %}
+
+{% block admin_content %}
+<h1 class="koco-section-title mb-1">Branding, text &amp; contacts</h1>
+<p class="koco-muted">
+  This one page holds the words and pictures visitors see. Change something, press Save, then reload the page.
+</p>
+
+<form method="post" class="koco-form" enctype="multipart/form-data" novalidate>
+  {% csrf_token %}
+  {{ form.non_field_errors }}
+
+  <div class="row g-3">
+    <div class="col-lg-6">
+      <div class="koco-card h-100">
+        <div class="koco-card-flat"><h2 class="h6 mb-0">Header and footer</h2></div>
+        <div class="koco-card-flat">
+          {% with field=form|boundfield:'organization_name' %}{% include "partials/_field.html" %}{% endwith %}
+          {% with field=form|boundfield:'motto' %}{% include "partials/_field.html" %}{% endwith %}
+          <div class="mb-3">
+            {% if site.logo %}
+              <img class="koco-gallery-thumb mb-2" src="{{ site.logo.url }}" alt="Current logo">
+              <p class="small-muted">Current logo. Uploading a new file replaces it.</p>
+            {% else %}
+              <p class="koco-note">No logo uploaded yet - the header shows the initials instead.</p>
+            {% endif %}
+            {% with field=form|boundfield:'logo' %}{% include "partials/_field.html" %}{% endwith %}
+          </div>
+          {% with field=form|boundfield:'footer_note' %}{% include "partials/_field.html" %}{% endwith %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="koco-card h-100">
+        <div class="koco-card-flat"><h2 class="h6 mb-0">Home page text</h2></div>
+        <div class="koco-card-flat">
+          {% with field=form|boundfield:'home_heading' %}{% include "partials/_field.html" %}{% endwith %}
+          {% with field=form|boundfield:'home_subheading' %}{% include "partials/_field.html" %}{% endwith %}
+          {% with field=form|boundfield:'home_body' %}{% include "partials/_field.html" %}{% endwith %}
+          {% with field=form|boundfield:'home_call_to_action' %}{% include "partials/_field.html" %}{% endwith %}
+          {% with field=form|boundfield:'home_statistics_note' %}{% include "partials/_field.html" %}{% endwith %}
+          <p class="small-muted mb-0">The photos on the right of the home page are managed under
+            <a href="{% url 'admin_panel:settings_slider' %}">Home slider photos</a>.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="koco-card h-100">
+        <div class="koco-card-flat"><h2 class="h6 mb-0">About page</h2></div>
+        <div class="koco-card-flat">
+          {% with field=form|boundfield:'about_mission' %}{% include "partials/_field.html" %}{% endwith %}
+          {% with field=form|boundfield:'about_vision' %}{% include "partials/_field.html" %}{% endwith %}
+          {% with field=form|boundfield:'about_history' %}{% include "partials/_field.html" %}{% endwith %}
+          {% with field=form|boundfield:'about_leadership' %}{% include "partials/_field.html" %}{% endwith %}
+          {% with field=form|boundfield:'about_photo' %}{% include "partials/_field.html" %}{% endwith %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="koco-card h-100">
+        <div class="koco-card-flat"><h2 class="h6 mb-0">Contacts &amp; location</h2></div>
+        <div class="koco-card-flat">
+          {% with field=form|boundfield:'whatsapp_number' %}{% include "partials/_field.html" %}{% endwith %}
+          {% with field=form|boundfield:'contact_email' %}{% include "partials/_field.html" %}{% endwith %}
+          {% with field=form|boundfield:'postal_address' %}{% include "partials/_field.html" %}{% endwith %}
+          {% with field=form|boundfield:'location_label' %}{% include "partials/_field.html" %}{% endwith %}
+          {% with field=form|boundfield:'map_embed_url' %}{% include "partials/_field.html" %}{% endwith %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="koco-card h-100">
+        <div class="koco-card-flat"><h2 class="h6 mb-0">Bank details shown to members</h2></div>
+        <div class="koco-card-flat">
+          {% with field=form|boundfield:'bank_name' %}{% include "partials/_field.html" %}{% endwith %}
+          {% with field=form|boundfield:'bank_account_name' %}{% include "partials/_field.html" %}{% endwith %}
+          {% with field=form|boundfield:'bank_account_number' %}{% include "partials/_field.html" %}{% endwith %}
+          {% with field=form|boundfield:'bank_branch' %}{% include "partials/_field.html" %}{% endwith %}
+          {% with field=form|boundfield:'bank_notes' %}{% include "partials/_field.html" %}{% endwith %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="koco-card h-100">
+        <div class="koco-card-flat"><h2 class="h6 mb-0">M-Pesa paybill (manual payments)</h2></div>
+        <div class="koco-card-flat">
+          {% with field=form|boundfield:'mpesa_paybill' %}{% include "partials/_field.html" %}{% endwith %}
+          {% with field=form|boundfield:'mpesa_account_number' %}{% include "partials/_field.html" %}{% endwith %}
+          <p class="small-muted mb-0">
+            These are only the numbers members type on their phones. Automatic STK Push prompts use the
+            Daraja keys in <code>.env</code>, not this page.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex flex-wrap gap-2 mt-3">
+    <button class="koco-btn koco-btn-primary" type="submit"><i class="fa fa-floppy-disk"></i> Save all settings</button>
+    <a class="koco-btn koco-btn-ghost" href="{% url 'admin_panel:settings_home' %}">Back to settings</a>
+    <a class="koco-btn koco-btn-outline" href="{% url 'core:home' %}" target="_blank" rel="noopener">
+      <i class="fa fa-eye"></i> Preview the site
+    </a>
+  </div>
+</form>
+{% endblock %}

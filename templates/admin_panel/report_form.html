@@ -1,0 +1,83 @@
+{% extends "admin_panel/base_admin.html" %}
+
+{% block admin_content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item"><a href="{% url 'admin_panel:report_list' %}">Reports</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
+  </ol>
+</nav>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="koco-card">
+      <div class="koco-card-flat">
+        <h1 class="koco-section-title mb-1">{{ page_title }}</h1>
+        <p class="koco-muted mb-0">
+          Write what happened, how many students or families were helped, and thank the members in plain words.
+        </p>
+      </div>
+      <div class="koco-card-flat">
+        <form method="post" class="koco-form" enctype="multipart/form-data" novalidate>
+          {% csrf_token %}
+          {% include "partials/_form_fields.html" %}
+
+          <div class="mb-3">
+            <label class="form-label" for="photoInput">Add photos</label>
+            <input class="form-control" type="file" id="photoInput" name="photo" accept="image/*" multiple>
+            <div class="form-help">You can choose several at once. Images only, up to 5 MB each.</div>
+          </div>
+
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" name="email_members" value="on" id="emailMembers">
+            <label class="form-check-label" for="emailMembers">
+              Also email this report to all verified members
+            </label>
+            <div class="form-help">Only works when the report is published.</div>
+          </div>
+
+          <div class="d-flex flex-wrap gap-2">
+            <button class="koco-btn koco-btn-primary" type="submit"><i class="fa fa-floppy-disk"></i> Save report</button>
+            <a class="koco-btn koco-btn-ghost" href="{% url 'admin_panel:report_list' %}">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="koco-card h-100">
+      <div class="koco-card-flat">
+        <h2 class="h6">Photos on this report</h2>
+        {% if photos %}
+          <div class="row g-2">
+            {% for photo in photos %}
+              <div class="col-6">
+                <img class="img-fluid rounded-3" src="{{ photo.image.url }}" alt="{{ photo.caption }}">
+                {% if photo.caption %}<p class="small-muted mt-1 mb-1">{{ photo.caption }}</p>{% endif %}
+                <form method="post" action="{% url 'admin_panel:photo_delete' photo.pk %}"
+                      data-confirm="Remove this photo?">
+                  {% csrf_token %}
+                  <button class="koco-btn koco-btn-outline koco-btn-sm w-100 text-danger" type="submit">
+                    <i class="fa fa-xmark"></i> Remove
+                  </button>
+                </form>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="koco-muted mb-0">Save the report with photos and they appear here.</p>
+        {% endif %}
+      </div>
+      {% if report %}
+        <div class="koco-card-flat">
+          <p class="small-muted mb-0">
+            Public page: <a href="{{ report.get_absolute_url }}">{{ report.title }}</a><br>
+            {% if report.emailed_at %}Mailed to members on {{ report.emailed_at|date:"d M Y H:i" }}.{% else %}Not mailed yet.{% endif %}
+          </p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

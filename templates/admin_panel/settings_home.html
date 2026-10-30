@@ -1,0 +1,93 @@
+{% extends "admin_panel/base_admin.html" %}
+
+{% block admin_content %}
+<h1 class="koco-section-title mb-1">Site settings</h1>
+<p class="koco-muted">
+  Everything here changes the website without touching code. Save, then reload the page you changed to see it.
+</p>
+
+<div class="row g-3">
+  <div class="col-md-6 col-lg-4">
+    <div class="koco-card h-100">
+      <div class="koco-card-flat">
+        <h2 class="h6"><i class="fa fa-palette text-leaf"></i> Branding, text &amp; contacts</h2>
+        <p class="small-muted">Logo, motto, home page wording, About page, WhatsApp number, email, map and bank details.</p>
+      </div>
+      <div class="koco-card-flat">
+        <a class="koco-btn koco-btn-primary koco-btn-sm w-100" href="{% url 'admin_panel:settings_site' %}">Open</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6 col-lg-4">
+    <div class="koco-card h-100">
+      <div class="koco-card-flat">
+        <h2 class="h6"><i class="fa fa-images text-leaf"></i> Home slider photos</h2>
+        <p class="small-muted">The three photos that change by themselves on the home page, with captions and order.</p>
+      </div>
+      <div class="koco-card-flat">
+        <a class="koco-btn koco-btn-outline koco-btn-sm w-100" href="{% url 'admin_panel:settings_slider' %}">Open</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6 col-lg-4">
+    <div class="koco-card h-100">
+      <div class="koco-card-flat">
+        <h2 class="h6"><i class="fa fa-share-nodes text-leaf"></i> Social media links</h2>
+        <p class="small-muted">Facebook, X, Instagram, YouTube, WhatsApp and TikTok addresses shown in the footer.</p>
+      </div>
+      <div class="koco-card-flat">
+        <a class="koco-btn koco-btn-outline koco-btn-sm w-100" href="{% url 'admin_panel:settings_social' %}">Open</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6 col-lg-4">
+    <div class="koco-card h-100">
+      <div class="koco-card-flat">
+        <h2 class="h6"><i class="fa fa-bars text-leaf"></i> Navigation buttons</h2>
+        <p class="small-muted">Rename, reorder or hide the buttons under the header (Home, About, Events...).</p>
+      </div>
+      <div class="koco-card-flat">
+        <a class="koco-btn koco-btn-outline koco-btn-sm w-100" href="{% url 'admin_panel:settings_nav' %}">Open</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6 col-lg-4">
+    <div class="koco-card h-100">
+      <div class="koco-card-flat">
+        <h2 class="h6"><i class="fa fa-list text-leaf"></i> Dropdown options</h2>
+        <p class="small-muted">The Gender, Role and Occupation choices members pick when registering.</p>
+      </div>
+      <div class="koco-card-flat">
+        <a class="koco-btn koco-btn-outline koco-btn-sm w-100" href="{% url 'admin_panel:settings_options' %}">Open</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6 col-lg-4">
+    <div class="koco-card h-100">
+      <div class="koco-card-flat">
+        <h2 class="h6"><i class="fa fa-clock-rotate-left text-leaf"></i> Audit log</h2>
+        <p class="small-muted">Who changed what, and when - members, payments, settings and messages.</p>
+      </div>
+      <div class="koco-card-flat">
+        <a class="koco-btn koco-btn-outline koco-btn-sm w-100" href="{% url 'admin_panel:audit_list' %}">Open</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="koco-card mt-3">
+  <div class="koco-card-flat">
+    <h2 class="h6">Tips</h2>
+    <ul class="small-muted mb-0 ps-3">
+      <li>Use a square logo at least 200 x 200 pixels; it is resized automatically.</li>
+      <li>Slider photos look best wide (landscape) and at least 1200 pixels across.</li>
+      <li>The footer always shows the current year and the organisation name in capitals.</li>
+    </ul>
+  </div>
+</div>
+{% endblock %}

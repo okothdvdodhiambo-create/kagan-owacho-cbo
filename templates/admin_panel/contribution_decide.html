@@ -1,0 +1,74 @@
+{% extends "admin_panel/base_admin.html" %}
+{% load koc_tags %}
+
+{% block admin_content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item"><a href="{% url 'admin_panel:contribution_list' %}">Contributions</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Verify #{{ contribution.pk }}</li>
+  </ol>
+</nav>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="koco-card h-100">
+      <div class="koco-card-flat">
+        <h1 class="koco-section-title mb-1">Confirm or reject</h1>
+        <p class="koco-muted mb-0">Check the bank statement or M-Pesa entry before confirming. The member is notified either way.</p>
+      </div>
+      <div class="koco-card-flat">
+        <form method="post" class="koco-form" novalidate>
+          {% csrf_token %}
+          {% include "partials/_form_fields.html" %}
+          <div class="d-flex flex-wrap gap-2">
+            <button class="koco-btn koco-btn-primary" type="submit"><i class="fa fa-check"></i> Save decision</button>
+            <a class="koco-btn koco-btn-ghost" href="{% url 'admin_panel:contribution_list' %}">Back to the list</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="koco-card h-100">
+      <div class="koco-card-flat">
+        <h2 class="h6">What the member submitted</h2>
+        <table class="table table-sm mb-0">
+          <tbody>
+            <tr><th class="w-50">Member</th>
+              <td><a href="{% url 'admin_panel:member_detail' contribution.member.pk %}">{{ contribution.member.full_name }}</a>
+                  <div class="small-muted">{{ contribution.member.membership_no }} &middot; {{ contribution.member.phone }}</div></td></tr>
+            <tr><th>Amount</th><td><strong>KSh {{ contribution.amount|money }}</strong></td></tr>
+            <tr><th>Method</th><td>{{ contribution.get_method_display }}</td></tr>
+            <tr><th>Reference</th><td class="font-monospace">{{ contribution.reference|default:"-" }}</td></tr>
+            <tr><th>Payment date</th><td>{{ contribution.payment_date|date:"d M Y"|default:"not given" }}</td></tr>
+            <tr><th>Submitted</th><td>{{ contribution.created_at|date:"d M Y H:i" }}</td></tr>
+            <tr><th>Current status</th><td>{{ contribution.get_status_display }}</td></tr>
+            {% if contribution.note %}<tr><th>Note</th><td>{{ contribution.note }}</td></tr>{% endif %}
+            {% if contribution.result_message %}<tr><th>Network reply</th><td>{{ contribution.result_message }}</td></tr>{% endif %}
+          </tbody>
+        </table>
+      </div>
+      {% if contribution.receipt %}
+        <div class="koco-card-flat">
+          <h2 class="h6">Slip photo</h2>
+          <a href="{{ contribution.receipt.url }}" target="_blank" rel="noopener">
+            <img class="img-fluid rounded-3" src="{{ contribution.receipt.url }}" alt="Payment slip">
+          </a>
+        </div>
+      {% endif %}
+      {% if contribution.callbacks.all %}
+        <div class="koco-card-flat">
+          <h2 class="h6">M-Pesa callbacks received</h2>
+          {% for cb in contribution.callbacks.all %}
+            <p class="small-muted mb-1">
+              {{ cb.created_at|date:"d M Y H:i:s" }} &middot; code {{ cb.result_code }} &middot; {{ cb.result_desc }}
+              {% if cb.mpesa_receipt_number %}&middot; receipt {{ cb.mpesa_receipt_number }}{% endif %}
+            </p>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends "admin_panel/base_admin.html" %}
+{% load koc_tags %}
+
+{% block admin_content %}
+<h1 class="koco-section-title mb-1">Audit log</h1>
+<p class="koco-muted">
+  Every important action taken in this dashboard is recorded here with the admin who did it, when, and the
+  address they came from.
+</p>
+
+<form class="koco-card mb-3" method="get">
+  <div class="koco-card-flat">
+    <label class="form-label" for="id_q">Search actions</label>
+    <div class="input-group">
+      <input class="form-control" id="id_q" type="search" name="q" value="{{ search }}"
+             placeholder="member.edited, contribution.confirmed, a name or email&hellip;">
+      <button class="koco-btn koco-btn-primary" type="submit"><i class="fa fa-magnifying-glass"></i> Search</button>
+      {% if search %}
+        <a class="koco-btn koco-btn-outline" href="{% url 'admin_panel:audit_list' %}">Clear</a>
+      {% endif %}
+    </div>
+  </div>
+</form>
+
+<div class="koco-card">
+  <div class="koco-card-flat">
+    <h2 class="h6 mb-0">{{ entries.paginator.count }} record{{ entries.paginator.count|pluralize }}</h2>
+  </div>
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <thead>
+        <tr><th>When</th><th>Admin</th><th>Action</th><th>Target</th><th>Details</th><th>IP</th></tr>
+      </thead>
+      <tbody>
+        {% for entry in entries %}
+          <tr>
+            <td class="text-nowrap small">{{ entry.created_at|date:"d M Y H:i" }}</td>
+            <td>{% if entry.actor %}{{ entry.actor.name|default:entry.actor.email }}{% else %}<span class="koco-muted">system</span>{% endif %}</td>
+            <td><code class="small">{{ entry.action }}</code></td>
+            <td>{{ entry.target|default:"-" }}</td>
+            <td class="small">{{ entry.details|truncatechars:90|default:"-" }}</td>
+            <td class="small">{{ entry.ip_address|default:"-" }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6"><div class="koco-empty"><i class="fa fa-shield-halved"></i> No records match that search.</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="koco-card-flat">
+    {% include "partials/_pagination.html" with page_obj=entries %}
+  </div>
+</div>
+{% endblock %}

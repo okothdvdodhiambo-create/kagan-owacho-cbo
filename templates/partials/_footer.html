@@ -1,0 +1,59 @@
+{% load static %}
+<footer class="koco-footer">
+  <div class="container">
+    <div class="row g-4">
+      <div class="col-12 col-lg-5">
+        <div class="koco-footer-brand">
+          {% if SITE.logo %}
+            <img class="koco-footer-logo" src="{{ SITE.logo.url }}" alt="{{ SITE.organization_name }} logo">
+          {% else %}
+            <span class="koco-footer-mark">KO</span>
+          {% endif %}
+          <div>
+            <p class="koco-footer-name">{{ SITE.organization_name }}</p>
+            {% if SITE.motto %}<p class="koco-footer-sub">{{ SITE.motto }}</p>{% endif %}
+          </div>
+        </div>
+        {% if SITE.footer_note %}<p class="mt-3 mb-0 small">{{ SITE.footer_note }}</p>{% endif %}
+        <div class="koco-footer-social mt-3">
+          {% for link in SOCIAL_LINKS %}
+            <a href="{{ link.url }}" target="_blank" rel="noopener me" aria-label="{{ link.get_platform_display }}" title="{{ link.get_platform_display }}">
+              <i class="fa-brands fa-{{ link.icon }}"></i>
+            </a>
+          {% empty %}
+            <span class="small opacity-75">Social links appear here once the admin adds them.</span>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="col-6 col-lg-3">
+        <p class="koco-footer-title">Quick links</p>
+        <ul class="koco-footer-list">
+          {% for entry in NAV_ITEMS %}
+            <li><a href="{{ entry.url }}">{{ entry.item.title }}</a></li>
+          {% endfor %}
+          {% if user.is_authenticated %}
+            <li><a href="{% url 'accounts:profile' %}">Edit profile</a></li>
+          {% else %}
+            <li><a href="{% url 'accounts:login' %}">Member login</a></li>
+          {% endif %}
+        </ul>
+      </div>
+
+      <div class="col-6 col-lg-4">
+        <p class="koco-footer-title">Reach us</p>
+        <ul class="koco-footer-list">
+          <li><i class="fa-solid fa-location-dot me-2 text-gold"></i>{{ SITE.location_label }}</li>
+          <li><i class="fa-brands fa-whatsapp me-2 text-gold"></i><a href="{{ SITE.whatsapp_url }}" target="_blank" rel="noopener">{{ SITE.whatsapp_number }}</a></li>
+          <li><i class="fa-solid fa-envelope me-2 text-gold"></i><a href="mailto:{{ SITE.contact_email }}">{{ SITE.contact_email }}</a></li>
+          {% if SITE.postal_address %}<li><i class="fa-solid fa-envelope-open-text me-2 text-gold"></i>{{ SITE.postal_address }}</li>{% endif %}
+        </ul>
+      </div>
+    </div>
+
+    <div class="koco-footer-bottom">
+      <span>&copy; {{ CURRENT_YEAR }} {{ SITE.organization_name }}. All rights reserved.</span>
+      <span>Kagan Ward &middot; Rangwe &middot; Homa Bay County, Kenya</span>
+    </div>
+  </div>
+</footer>

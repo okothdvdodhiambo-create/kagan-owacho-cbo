@@ -1,0 +1,49 @@
+{# Left sidebar for every page inside the member area. Collapses on phones. #}
+<div class="koco-side" data-side data-collapsed="true">
+  <button class="koco-btn koco-btn-outline koco-btn-sm koco-side-toggle" type="button"
+          data-side-toggle aria-expanded="false" aria-controls="memberSideBody">
+    <i class="fa fa-bars"></i> Menu
+  </button>
+  <div class="koco-side-body" id="memberSideBody">
+    <p class="koco-side-title">Me</p>
+    <a class="koco-side-link {% if active_section == 'dashboard' %}active{% endif %}" href="{% url 'membership:dashboard' %}">
+      <i class="fa fa-gauge-high"></i> My dashboard
+    </a>
+    <a class="koco-side-link {% if active_section == 'profile' %}active{% endif %}" href="{% url 'accounts:profile' %}">
+      <i class="fa fa-user-pen"></i> Edit profile
+    </a>
+
+    <p class="koco-side-title">Giving</p>
+    <a class="koco-side-link {% if active_section == 'contribute' %}active{% endif %}" href="{% url 'contributions:choose' %}">
+      <i class="fa fa-hand-holding-heart"></i> Send contribution
+    </a>
+    <a class="koco-side-link {% if active_section == 'transcript' %}active{% endif %}" href="{% url 'contributions:transcript' %}">
+      <i class="fa fa-receipt"></i> Contribution history
+    </a>
+
+    <p class="koco-side-title">Support</p>
+    <a class="koco-side-link" href="{{ SITE.whatsapp_url }}" target="_blank" rel="noopener">
+      <i class="fa-brands fa-whatsapp"></i> WhatsApp us
+    </a>
+    <a class="koco-side-link {% if active_section == 'contact' %}active{% endif %}" href="{% url 'membership:contact' %}">
+      <i class="fa fa-envelope"></i> Email us
+    </a>
+    <a class="koco-side-link {% if active_section == 'location' %}active{% endif %}" href="{% url 'membership:location' %}">
+      <i class="fa fa-location-dot"></i> Location
+    </a>
+    <a class="koco-side-link {% if active_section == 'incidents' %}active{% endif %}" href="{% url 'incidents:list' %}">
+      <i class="fa fa-triangle-exclamation"></i> Report an incident
+    </a>
+    <a class="koco-side-link {% if active_section == 'events' %}active{% endif %}" href="{% url 'events:list' %}">
+      <i class="fa fa-calendar-check"></i> Events
+    </a>
+
+    <div class="koco-divider"></div>
+    <form method="post" action="{% url 'accounts:logout' %}">
+      {% csrf_token %}
+      <button class="koco-btn koco-btn-ghost w-100" type="submit">
+        <i class="fa fa-right-from-bracket"></i> Log out
+      </button>
+    </form>
+  </div>
+</div>

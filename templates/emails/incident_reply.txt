@@ -1,0 +1,14 @@
+Hello {{ member.full_name }},
+
+There is an update on the incident you reported on {{ incident.occurred_on }}:
+"{{ incident.title }}"
+
+Status now: {{ incident.get_status_display }}
+
+Reply from the team:
+{{ reply.body }}
+
+You can read the whole conversation by logging in to the website and opening
+My dashboard > Report an incident.
+
+{{ org_name }}

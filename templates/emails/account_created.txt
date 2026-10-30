@@ -1,0 +1,11 @@
+Hello {{ member.full_name }},
+
+Your {{ org_name }} membership {{ membership_no }} is confirmed. We also created a login
+account for {{ member.email }} so you can sign in to the member dashboard.
+
+Click the link below to choose your own password. It stays valid for a few days:
+{{ reset_url }}
+
+If the link does not work, use "Forgot password" on the login page instead.
+
+{{ org_name }}

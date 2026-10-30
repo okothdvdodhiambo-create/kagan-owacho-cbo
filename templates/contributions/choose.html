@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% load koc_tags %}
+
+{% block content %}
+<div class="koco-shell">
+  {% include "partials/_member_side.html" %}
+
+  <div>
+    <h1 class="koco-section-title mb-1">Send a contribution</h1>
+    <p class="koco-muted">
+      Every shilling goes to school fees and support for families in Kagan. Choose how you want to pay.
+    </p>
+
+    <div class="row g-3">
+      <div class="col-md-6">
+        <div class="koco-card h-100">
+          <div class="koco-card-flat">
+            <h2 class="h5"><i class="fa fa-mobile-screen text-leaf"></i> M-Pesa</h2>
+            {% if mpesa_ready %}
+              <p class="small-muted">
+                Enter your amount and phone. Safaricom sends a prompt to your phone; the moment you enter your
+                PIN the payment is confirmed on your transcript automatically.
+              </p>
+              <a class="koco-btn koco-btn-primary" href="{% url 'contributions:mpesa' %}">
+                <i class="fa fa-bolt"></i> Pay now with STK Push
+              </a>
+            {% else %}
+              <div class="koco-note mb-2">
+                Online M-Pesa prompts are not switched on yet (the office needs to add its Daraja keys).
+                You can still pay from your phone and record the code.
+              </div>
+            {% endif %}
+            <a class="koco-btn koco-btn-outline mt-2" href="{% url 'contributions:manual' %}">
+              <i class="fa fa-keyboard"></i> Record an M-Pesa code
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <div class="koco-card h-100">
+          <div class="koco-card-flat">
+            <h2 class="h5"><i class="fa fa-building-columns text-leaf"></i> Bank</h2>
+            <p class="small-muted mb-2">
+              Deposit or transfer to the account below, then submit the slip number so the treasurer can confirm it.
+            </p>
+            <ul class="list-unstyled small mb-3">
+              <li><strong>{{ site.bank_name }}</strong></li>
+              <li>{{ site.bank_account_name }}</li>
+              <li>Account: {{ site.bank_account_number }}</li>
+              {% if site.bank_branch %}<li>Branch: {{ site.bank_branch }}</li>{% endif %}
+            </ul>
+            <a class="koco-btn koco-btn-primary" href="{% url 'contributions:bank' %}">
+              <i class="fa fa-paper-plane"></i> Submit a bank payment
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% if site.mpesa_paybill %}
+      <div class="koco-card mt-3">
+        <div class="koco-card-flat">
+          <h2 class="h6">M-Pesa paybill details</h2>
+          <p class="mb-0">
+            Paybill <strong>{{ site.mpesa_paybill }}</strong>
+            {% if site.mpesa_account_number %} &middot; Account <strong>{{ site.mpesa_account_number }}</strong>{% endif %}
+          </p>
+        </div>
+      </div>
+    {% endif %}
+
+    <div class="row g-3 mt-1">
+      <div class="col-6 col-lg-3">
+        <div class="koco-stat-tile">
+          <div class="num">KSh {{ totals.confirmed_total|money }}</div>
+          <div class="cap">Confirmed giving</div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="koco-stat-tile gold">
+          <div class="num">{{ totals.confirmed_count }}</div>
+          <div class="cap">Payments received</div>
+        </div>
+      </div>
+      <div class="col-12 col-lg-6">
+        <div class="koco-card h-100">
+          <div class="koco-card-flat">
+            <p class="mb-2 small-muted">Waiting for the treasurer to check: <strong>{{ totals.pending_count }}</strong></p>
+            <a class="koco-btn koco-btn-outline koco-btn-sm" href="{% url 'contributions:transcript' %}">
+              <i class="fa fa-receipt"></i> My contribution history
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

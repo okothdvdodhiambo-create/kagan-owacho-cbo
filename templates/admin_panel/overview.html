@@ -1,0 +1,165 @@
+{% extends "admin_panel/base_admin.html" %}
+{% load koc_tags %}
+
+{% block admin_content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <div>
+    <h1 class="koco-section-title mb-0">Admin dashboard</h1>
+    <p class="koco-muted mb-0">Signed in as {{ user.email }} &middot; {{ user.get_full_name }}</p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a class="koco-btn koco-btn-primary koco-btn-sm" href="{% url 'admin_panel:campaign_create' %}">
+      <i class="fa fa-bullhorn"></i> Announce to members
+    </a>
+    <a class="koco-btn koco-btn-outline koco-btn-sm" href="{% url 'admin_panel:event_new' %}">
+      <i class="fa fa-plus"></i> New event
+    </a>
+    <a class="koco-btn koco-btn-outline koco-btn-sm" href="{% url 'core:home' %}">
+      <i class="fa fa-eye"></i> View the site
+    </a>
+  </div>
+</div>
+
+{% if not mpesa_live %}
+  <div class="koco-note mb-3">
+    <i class="fa fa-circle-info"></i>
+    M-Pesa online prompts (Daraja) are not configured yet, so members use the manual M-Pesa code route.
+    Add the Safaricom keys to <code>.env</code> to switch STK Push on.
+  </div>
+{% endif %}
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3">
+    <div class="koco-stat-tile">
+      <div class="num">{{ stats.members_total }}</div>
+      <div class="cap">Members registered</div>
+      <div class="small-muted">{{ stats.members_active }} active &middot; {{ stats.members_pending }} waiting for code</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="koco-stat-tile gold">
+      <div class="num">KSh {{ stats.contributions_ksh|money }}</div>
+      <div class="cap">Total contributions</div>
+      <div class="small-muted">KSh {{ stats.month_ksh|money }} in {{ this_month_label }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="koco-stat-tile">
+      <div class="num">{{ stats.pending_verifications }}</div>
+      <div class="cap">Payments to verify</div>
+      <div class="small-muted"><a href="{% url 'admin_panel:contribution_list' %}?status=pending">Open the list</a></div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="koco-stat-tile">
+      <div class="num">{{ stats.new_incidents }}</div>
+      <div class="cap">New incident reports</div>
+      <div class="small-muted"><a href="{% url 'admin_panel:incident_list' %}">Inbox</a></div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="koco-card h-100">
+      <div class="koco-card-flat d-flex justify-content-between align-items-center">
+        <h2 class="h6 mb-0">Latest contributions</h2>
+        <a class="small" href="{% url 'admin_panel:contribution_list' %}">All</a>
+      </div>
+      <div class="koco-card-flat">
+        {% for row in recent_contributions %}
+          <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+            <div>
+              <a class="fw-semibold text-decoration-none" href="{% url 'admin_panel:member_detail' row.member.pk %}">{{ row.member.full_name }}</a>
+              <div class="small-muted">{{ row.get_method_display }} &middot; {{ row.created_at|date:"d M Y H:i" }}</div>
+            </div>
+            <div class="text-end">
+              <strong>KSh {{ row.amount|money }}</strong>
+              <div class="small-muted">{{ row.get_status_display }}</div>
+            </div>
+          </div>
+        {% empty %}
+          <p class="koco-muted mb-0">No contributions recorded yet.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="koco-card h-100">
+      <div class="koco-card-flat d-flex justify-content-between align-items-center">
+        <h2 class="h6 mb-0">Newest members</h2>
+        <a class="small" href="{% url 'admin_panel:member_list' %}">All</a>
+      </div>
+      <div class="koco-card-flat">
+        {% for member in recent_members %}
+          <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+            <div>
+              <a class="fw-semibold text-decoration-none" href="{% url 'admin_panel:member_detail' member.pk %}">{{ member.full_name }}</a>
+              <div class="small-muted">{{ member.membership_no|default:"not yet confirmed" }} &middot; {{ member.phone }}</div>
+            </div>
+            <span class="badge text-bg-{% if member.status == 'active' %}success{% elif member.status == 'suspended' %}danger{% else %}warning text-dark{% endif %}">
+              {{ member.get_status_display }}
+            </span>
+          </div>
+        {% empty %}
+          <p class="koco-muted mb-0">Nobody has registered yet. Share the Register as a Member link.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="koco-card h-100">
+      <div class="koco-card-flat d-flex justify-content-between align-items-center">
+        <h2 class="h6 mb-0">Recent incident reports</h2>
+        <a class="small" href="{% url 'admin_panel:incident_list' %}">Inbox</a>
+      </div>
+      <div class="koco-card-flat">
+        {% for incident in recent_incidents %}
+          <div class="d-flex justify-content-between align-items-start border-bottom py-2">
+            <div>
+              <a class="fw-semibold text-decoration-none" href="{% url 'admin_panel:incident_detail' incident.pk %}">{{ incident.title }}</a>
+              <div class="small-muted">{{ incident.member.full_name }} &middot; happened {{ incident.occurred_on|date:"d M Y" }}</div>
+            </div>
+            <span class="badge text-bg-{{ incident.status_css }}">{{ incident.get_status_display }}</span>
+          </div>
+        {% empty %}
+          <p class="koco-muted mb-0">No incidents reported.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="koco-card h-100">
+      <div class="koco-card-flat">
+        <h2 class="h6">Needs attention</h2>
+        <ul class="list-unstyled mb-0">
+          <li class="d-flex justify-content-between py-1 border-bottom">
+            <span>Unread member messages</span>
+            <a href="{% url 'admin_panel:contact_list' %}?handled=no"><strong>{{ stats.contact_unread }}</strong></a>
+          </li>
+          <li class="d-flex justify-content-between py-1 border-bottom">
+            <span>Payments waiting</span>
+            <a href="{% url 'admin_panel:contribution_list' %}?status=pending"><strong>{{ stats.pending_verifications }}</strong></a>
+          </li>
+          <li class="d-flex justify-content-between py-1 border-bottom">
+            <span>Members awaiting code</span>
+            <a href="{% url 'admin_panel:member_list' %}?status=pending_verification"><strong>{{ stats.members_pending }}</strong></a>
+          </li>
+          <li class="d-flex justify-content-between py-1">
+            <span>Events on the calendar</span>
+            <a href="{% url 'admin_panel:event_list' %}"><strong>{{ stats.events }}</strong></a>
+          </li>
+        </ul>
+      </div>
+      <div class="koco-card-flat">
+        <a class="koco-btn koco-btn-outline koco-btn-sm w-100" href="{% url 'admin_panel:settings_home' %}">
+          <i class="fa fa-sliders"></i> Edit site text, logo &amp; photos
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

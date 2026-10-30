@@ -1,0 +1,67 @@
+{% extends "admin_panel/base_admin.html" %}
+
+{% block admin_content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <div>
+    <h1 class="koco-section-title mb-1">Member messages</h1>
+    <p class="koco-muted mb-0">The "Email us" form on the member dashboard lands here.</p>
+  </div>
+  <div class="btn-group" role="group" aria-label="Filter by handled state">
+    <a class="koco-btn koco-btn-outline koco-btn-sm {% if handled_filter == '' %}koco-btn-primary{% endif %}"
+       href="{% url 'admin_panel:contact_list' %}">All</a>
+    <a class="koco-btn koco-btn-outline koco-btn-sm {% if handled_filter == 'no' %}koco-btn-primary{% endif %}"
+       href="{% url 'admin_panel:contact_list' %}?handled=no">Unanswered</a>
+    <a class="koco-btn koco-btn-outline koco-btn-sm {% if handled_filter == 'yes' %}koco-btn-primary{% endif %}"
+       href="{% url 'admin_panel:contact_list' %}?handled=yes">Handled</a>
+  </div>
+</div>
+
+{% for entry in inbox %}
+  <div class="koco-card mb-3">
+    <div class="koco-card-flat">
+      <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+        <div>
+          <h2 class="h6 mb-1">{{ entry.subject }}</h2>
+          <p class="small-muted mb-0">
+            {{ entry.name }} &middot; <a href="mailto:{{ entry.email }}">{{ entry.email }}</a>
+            {% if entry.phone %}&middot; <a href="tel:{{ entry.phone }}">{{ entry.phone }}</a>{% endif %}
+            {% if entry.member %}&middot; {{ entry.member.membership_no }}{% endif %}
+            <br>{{ entry.created_at|date:"d M Y H:i" }}
+          </p>
+        </div>
+        {% if entry.handled %}
+          <span class="badge text-bg-success">
+            Handled{% if entry.handled_by %} by {{ entry.handled_by.get_full_name|default:entry.handled_by.email }}{% endif %}
+          </span>
+        {% else %}
+          <span class="badge text-bg-warning text-dark">Waiting for a reply</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="koco-card-flat">
+      {{ entry.message|linebreaks }}
+    </div>
+    <div class="koco-card-flat d-flex flex-wrap gap-2">
+      <a class="koco-btn koco-btn-outline koco-btn-sm"
+         href="mailto:{{ entry.email }}?subject=Re:%20{{ entry.subject|urlencode }}">
+        <i class="fa fa-reply"></i> Reply by email
+      </a>
+      <form method="post" action="{% url 'admin_panel:contact_mark' entry.pk %}">
+        {% csrf_token %}
+        <button class="koco-btn koco-btn-primary koco-btn-sm" type="submit">
+          <i class="fa fa-{% if entry.handled %}arrow-rotate-left{% else %}check{% endif %}"></i>
+          {% if entry.handled %}Reopen{% else %}Mark handled{% endif %}
+        </button>
+      </form>
+    </div>
+  </div>
+{% empty %}
+  <div class="koco-card">
+    <div class="koco-empty">
+      <i class="fa fa-inbox"></i> No messages in this view.
+    </div>
+  </div>
+{% endfor %}
+
+{% include "partials/_pagination.html" with page_obj=inbox %}
+{% endblock %}

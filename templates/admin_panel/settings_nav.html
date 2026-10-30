@@ -1,0 +1,67 @@
+{% extends "admin_panel/base_admin.html" %}
+
+{% block admin_content %}
+<h1 class="koco-section-title mb-1">Navigation buttons</h1>
+<p class="koco-muted">
+  These are the buttons across the top of every public page. Change a word, change the order, or hide a
+  button - you never need to touch the code.
+</p>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="koco-card">
+      <div class="koco-card-flat"><h2 class="h6 mb-0">Buttons in the menu</h2></div>
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead>
+            <tr><th>Order</th><th>Name shown</th><th>Points to</th><th>Visible</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for item in items %}
+              <tr>
+                <td><span class="badge text-bg-light">{{ item.order }}</span></td>
+                <td class="fw-semibold">{{ item.title }}</td>
+                <td><code class="small">{{ item.url }}</code></td>
+                <td>{{ item.visible|yesno:"yes,no" }}</td>
+                <td class="text-end text-nowrap">
+                  <a class="koco-btn koco-btn-outline koco-btn-sm" href="{% url 'admin_panel:settings_nav' %}?edit={{ item.pk }}">
+                    <i class="fa fa-pen"></i> Edit
+                  </a>
+                  <form class="d-inline" method="post" action="{% url 'admin_panel:nav_delete' item.pk %}" data-confirm="Remove this button from the menu?">
+                    {% csrf_token %}
+                    <button class="koco-btn koco-btn-outline koco-btn-sm text-danger" type="submit">
+                      <i class="fa fa-trash"></i>
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="5"><div class="koco-empty"><i class="fa fa-bars"></i> No menu buttons yet.</div></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="koco-card h-100">
+      <div class="koco-card-flat"><h2 class="h6 mb-0">{% if editing %}Edit this button{% else %}Add a button{% endif %}</h2></div>
+      <div class="koco-card-flat">
+        <form method="post" class="koco-form" novalidate>
+          {% csrf_token %}
+          {% include "partials/_form_fields.html" %}
+          <button class="koco-btn koco-btn-primary w-100" type="submit">
+            <i class="fa fa-floppy-disk"></i> {% if editing %}Save changes{% else %}Add button{% endif %}
+          </button>
+        </form>
+        <div class="koco-note mt-3">
+          <p class="mb-1 fw-semibold">Addresses you can use</p>
+          <p class="mb-1"><code>/</code> home &middot; <code>/about/</code> &middot; <code>/events/</code> &middot; <code>/events/calendar/</code> &middot; <code>/register/</code></p>
+          <p class="mb-0">A smaller "Order" number appears further left. Untick "Visible" to hide a button without deleting it.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

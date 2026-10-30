@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="koco-shell">
+  {% include "partials/_member_side.html" %}
+
+  <div>
+    <div class="koco-card">
+      <div class="koco-card-flat">
+        <h1 class="koco-section-title mb-1">Report an incident</h1>
+        <p class="koco-muted mb-0">
+          Tell the committee about a problem, a family in need, or a misuse of support. Your report goes
+          straight to the admin inbox and you can follow the answer here.
+        </p>
+      </div>
+      <div class="koco-card-flat">
+        <form method="post" class="koco-form" enctype="multipart/form-data" novalidate>
+          {% csrf_token %}
+          {% include "partials/_form_fields.html" %}
+          <p class="small-muted">
+            A photo or document is optional. Accepted: images (jpg, png, webp) or a PDF, up to 5 MB.
+          </p>
+          <div class="d-flex flex-wrap gap-2">
+            <button class="koco-btn koco-btn-primary" type="submit">
+              <i class="fa fa-paper-plane"></i> Send to the committee
+            </button>
+            <a class="koco-btn koco-btn-ghost" href="{% url 'incidents:list' %}">See my reports</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

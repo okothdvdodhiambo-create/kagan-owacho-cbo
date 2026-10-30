@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="koco-shell">
+  {% include "partials/_member_side.html" %}
+
+  <div>
+    <div class="row justify-content-center">
+      <div class="col-lg-7">
+        <div class="koco-card">
+          <div class="koco-card-flat">
+            <h1 class="koco-section-title mb-1">Pay by M-Pesa</h1>
+            <p class="koco-muted mb-0">
+              We send a prompt to the phone number below. Enter your M-Pesa PIN on the prompt and the
+              payment is confirmed automatically.
+            </p>
+          </div>
+          <div class="koco-card-flat">
+            <form method="post" class="koco-form" novalidate>
+              {% csrf_token %}
+              {% for field in form %}
+                <div class="mb-3">
+                  <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                  {% if field.name == 'amount' %}
+                    <div class="input-group">
+                      <span class="input-group-text">KSh</span>
+                      {{ field }}
+                    </div>
+                    <div class="form-help mt-1">You are sending <strong data-money-preview="amount">KSh 0.00</strong>.</div>
+                  {% else %}
+                    {{ field }}
+                  {% endif %}
+                  {% if field.help_text %}<div class="form-help mt-1">{{ field.help_text|safe }}</div>{% endif %}
+                  {% for error in field.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+                </div>
+              {% endfor %}
+              <div class="d-flex flex-wrap gap-2">
+                <button class="koco-btn koco-btn-primary" type="submit">
+                  <i class="fa fa-mobile-screen-button"></i> Send me the prompt
+                </button>
+                <a class="koco-btn koco-btn-ghost" href="{% url 'contributions:choose' %}">Choose another way</a>
+              </div>
+            </form>
+            <div class="koco-divider"></div>
+            <p class="small-muted mb-0">
+              Prefer to pay yourself and record the code?
+              <a href="{% url 'contributions:manual' %}">Enter the M-Pesa code</a> instead.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

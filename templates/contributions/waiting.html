@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% load koc_tags %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8 col-lg-6">
+    <div class="koco-card text-center">
+      <div class="koco-card-flat">
+        <div class="koco-logo-mark mx-auto mb-3"><i class="fa fa-mobile-screen-button"></i></div>
+        <h1 class="koco-section-title mb-1">Check your phone</h1>
+        <p class="koco-muted mb-0">
+          Safaricom is prompting <strong>{{ contribution.phone }}</strong> for
+          <strong>KSh {{ contribution.amount|money }}</strong>. Enter your M-Pesa PIN to complete the gift.
+        </p>
+      </div>
+      <div class="koco-card-flat">
+        <div data-mpesa-waiting data-status-url="{% url 'contributions:waiting_status' contribution.pk %}">
+          <div class="koco-note mb-3">
+            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+            Waiting for Safaricom to confirm&hellip; this page updates by itself.
+          </div>
+          <div data-mpesa-result></div>
+        </div>
+        <div class="koco-divider"></div>
+        <p class="small-muted">
+          Reference for this attempt: <strong>#{{ contribution.pk }}</strong><br>
+          Nothing on your phone? <a href="{% url 'contributions:mpesa' %}">Start again</a> or
+          <a href="{% url 'contributions:manual' %}">record the M-Pesa code manually</a>.
+        </p>
+        <a class="koco-btn koco-btn-ghost koco-btn-sm" href="{% url 'contributions:transcript' %}">Go to my transcript</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

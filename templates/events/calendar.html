@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<h1 class="koco-section-title">Event Calendar</h1>
+<p class="koco-muted">
+  Tap any coloured box to see what is happening, where, and when. Times are East Africa Time (EAT).
+</p>
+
+<div class="koco-card mb-3">
+  <div class="koco-card-flat">
+    <div id="koco-calendar" data-feed-url="{{ feed_url }}" data-timezone="{{ calendar_timezone }}"></div>
+    <noscript>
+      <p class="mt-3 mb-0">JavaScript is switched off, so the calendar cannot load.
+        Open the <a href="{% url 'events:list' %}">Events Sponsored</a> list instead.</p>
+    </noscript>
+  </div>
+</div>
+
+<p class="small-muted">
+  Looking for something that already happened? <a href="{% url 'events:list' %}">See all sponsored events and reports</a>.
+</p>
+
+<div class="modal fade" id="eventModal" tabindex="-1" aria-hidden="true" aria-labelledby="eventModalTitle">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title h5" id="eventModalTitle" data-modal-title>Event</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-1"><i class="fa fa-clock text-leaf"></i> <span data-modal-when></span></p>
+        <p class="mb-3"><i class="fa fa-location-dot text-leaf"></i> <span data-modal-venue></span></p>
+        <p class="mb-3" data-modal-desc></p>
+        <a class="koco-btn koco-btn-primary koco-btn-sm" href="#" data-modal-link>
+          <i class="fa fa-arrow-right"></i> Open the event page
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+{% endblock %}

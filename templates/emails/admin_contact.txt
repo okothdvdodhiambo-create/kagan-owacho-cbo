@@ -1,0 +1,13 @@
+A member used the "Email us" form.
+
+Name: {{ message.name }}
+Email: {{ message.email }}
+Phone: {{ message.phone|default:"-" }}
+Subject: {{ message.subject }}
+Received: {{ message.created_at }}
+
+Message:
+{{ message.message }}
+
+Answer the member by replying to the email above, then mark the message handled in the
+admin dashboard.

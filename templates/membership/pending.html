@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8 col-lg-6">
+    <div class="koco-card text-center">
+      <div class="koco-card-flat">
+        <i class="fa fa-id-card koco-gold" style="font-size:2.4rem"></i>
+        <h1 class="koco-section-title mt-2 mb-1">One step left</h1>
+        <p class="koco-muted mb-0">
+          Hello {{ user.get_short_name|default:user.name }}. Your membership record for
+          <strong>{{ member.email }}</strong> is waiting for a code confirmation before it becomes Active.
+        </p>
+      </div>
+      <div class="koco-card-flat d-grid gap-2">
+        <a class="koco-btn koco-btn-primary" href="{% url 'membership:verify' %}">
+          <i class="fa fa-key"></i> Enter my code
+        </a>
+        <a class="koco-btn koco-btn-outline" href="{% url 'membership:register' %}">
+          <i class="fa fa-pen"></i> Update my details and resend
+        </a>
+        <a class="koco-btn koco-btn-ghost" href="{% url 'core:home' %}">Back to home</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "admin_panel/base_admin.html" %}
+
+{% block admin_content %}
+<h1 class="koco-section-title mb-1">Home slider photos</h1>
+<p class="koco-muted">
+  Three photos work best. They change by themselves on the home page; visitors can also use the arrows and dots.
+</p>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="koco-card">
+      <div class="koco-card-flat"><h2 class="h6 mb-0">Photos on the slider</h2></div>
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead>
+            <tr><th>Preview</th><th>Caption</th><th>Order</th><th>Showing</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for image in images %}
+              <tr>
+                <td style="width:150px"><img class="koco-gallery-thumb" style="width:140px;height:80px" src="{{ image.image.url }}" alt="{{ image.caption }}"></td>
+                <td>{{ image.caption|default:"(no caption)" }}</td>
+                <td>{{ image.order }}</td>
+                <td>{{ image.active|yesno:"yes,no" }}</td>
+                <td class="text-end text-nowrap">
+                  <a class="koco-btn koco-btn-outline koco-btn-sm" href="{% url 'admin_panel:settings_slider' %}?edit={{ image.pk }}">
+                    <i class="fa fa-pen"></i> Edit
+                  </a>
+                  <form class="d-inline" method="post" action="{% url 'admin_panel:slider_delete' image.pk %}" data-confirm="Remove this photo?">
+                    {% csrf_token %}
+                    <button class="koco-btn koco-btn-outline koco-btn-sm text-danger" type="submit">
+                      <i class="fa fa-trash"></i>
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="5"><div class="koco-empty"><i class="fa fa-image"></i> The slider has no photos yet.</div></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="koco-card h-100">
+      <div class="koco-card-flat"><h2 class="h6 mb-0">{% if editing %}Edit this photo{% else %}Add a photo{% endif %}</h2></div>
+      <div class="koco-card-flat">
+        <form method="post" class="koco-form" enctype="multipart/form-data" novalidate>
+          {% csrf_token %}
+          {% include "partials/_form_fields.html" %}
+          <button class="koco-btn koco-btn-primary w-100" type="submit">
+            <i class="fa fa-plus"></i> Add to the slider
+          </button>
+        </form>
+        <p class="small-muted mt-2 mb-0">
+          Landscape photos at 1200 pixels wide or more look sharp on both phone and laptop. Images are
+          resized and compressed automatically.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

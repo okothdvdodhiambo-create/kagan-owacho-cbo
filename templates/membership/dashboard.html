@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% load koc_tags %}
+
+{% block content %}
+<div class="koco-shell">
+  {% include "partials/_member_side.html" %}
+
+  <div>
+    <div class="koco-member-card mb-3">
+      <div class="row align-items-center g-3">
+        <div class="col">
+          <p class="label mb-1">Membership number</p>
+          <p class="value mb-0">{{ member.membership_no }}</p>
+          <p class="mb-0 mt-2">{{ member.full_name }} &middot; <span class="badge text-bg-light">{{ member.get_status_display }}</span></p>
+          <p class="small mb-0 opacity-75">{{ member.phone }} &middot; {{ member.email }}</p>
+        </div>
+        <div class="col-auto">
+          {% if user.photo %}
+            <img class="koco-avatar" src="{{ user.photo.url }}" alt="Your photo">
+          {% else %}
+            <span class="koco-avatar">{{ member.full_name|initials }}</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+      <div class="col-6 col-lg-3">
+        <div class="koco-stat-tile">
+          <div class="num">{{ totals.confirmed_count }}</div>
+          <div class="cap">Confirmed gifts</div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="koco-stat-tile gold">
+          <div class="num">KSh {{ totals.confirmed_total|money }}</div>
+          <div class="cap">Total given</div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="koco-stat-tile">
+          <div class="num">{{ totals.pending_count }}</div>
+          <div class="cap">Awaiting check</div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="koco-stat-tile">
+          <div class="num">{{ incidents|length }}</div>
+          <div class="cap">Incident reports</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="koco-card mb-3">
+      <div class="koco-card-flat">
+        <h2 class="koco-section-title">Quick actions</h2>
+        <div class="row g-2">
+          <div class="col-6 col-lg-3">
+            <a class="koco-btn koco-btn-primary w-100" href="{% url 'contributions:choose' %}">
+              <i class="fa fa-hand-holding-heart"></i> Send contribution
+            </a>
+          </div>
+          <div class="col-6 col-lg-3">
+            <a class="koco-btn koco-btn-outline w-100" href="{% url 'contributions:transcript' %}">
+              <i class="fa fa-receipt"></i> My transcript
+            </a>
+          </div>
+          <div class="col-6 col-lg-3">
+            <a class="koco-btn koco-btn-outline w-100" href="{{ SITE.whatsapp_url }}" target="_blank" rel="noopener">
+              <i class="fa-brands fa-whatsapp"></i> WhatsApp us
+            </a>
+          </div>
+          <div class="col-6 col-lg-3">
+            <a class="koco-btn koco-btn-outline w-100" href="{% url 'incidents:new' %}">
+              <i class="fa fa-triangle-exclamation"></i> Report incident
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-lg-7">
+        <div class="koco-card h-100">
+          <div class="koco-card-flat">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h2 class="h6 mb-0">Recent contributions</h2>
+              <a class="small" href="{% url 'contributions:transcript' %}">See all</a>
+            </div>
+            {% for row in recent_contributions %}
+              <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                <div>
+                  <strong>KSh {{ row.amount|money }}</strong>
+                  <div class="small-muted">{{ row.get_method_display }} &middot; {{ row.created_at|date:"d M Y" }}</div>
+                </div>
+                <span class="badge text-bg-{% if row.status == 'confirmed' %}success{% elif row.status == 'rejected' or row.status == 'failed' %}danger{% elif row.status == 'pending' or row.status == 'waiting' %}warning text-dark{% else %}secondary{% endif %}">
+                  {{ row.get_status_display }}
+                </span>
+              </div>
+            {% empty %}
+              <div class="koco-empty">
+                <i class="fa fa-seedling"></i>
+                No contributions yet. The first KSh you send shows here.
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-5">
+        <div class="koco-card h-100">
+          <div class="koco-card-flat">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h2 class="h6 mb-0">My incident reports</h2>
+              <a class="small" href="{% url 'incidents:list' %}">See all</a>
+            </div>
+            {% for row in incidents %}
+              <a class="d-block text-decoration-none border-bottom py-2" href="{% url 'incidents:detail' row.pk %}">
+                <strong class="d-block text-truncate">{{ row.title }}</strong>
+                <span class="small-muted">{{ row.occurred_on|date:"d M Y" }} &middot; {{ row.get_status_display }}</span>
+              </a>
+            {% empty %}
+              <p class="small-muted mb-0">Nothing reported. <a href="{% url 'incidents:new' %}>Report an incident</a> if something needs the team's attention.</p>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="koco-card mt-3">
+      <div class="koco-card-flat">
+        <h2 class="h6">Coming up</h2>
+        <div class="row g-3">
+          {% for event in upcoming_events %}
+            <div class="col-md-4">
+              <div class="koco-card-flat p-2 border rounded-3">
+                {% if event.photo %}<img class="koco-photo mb-2" src="{{ event.photo.url }}" alt="{{ event.title }}">{% endif %}
+                <strong class="d-block">{{ event.title }}</strong>
+                <span class="small-muted">{{ event.starts_at|date:"D, d M Y H:i" }} EAT<br>{{ event.venue }}</span>
+              </div>
+            </div>
+          {% empty %}
+            <p class="small-muted mb-0">No scheduled events yet.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="koco-shell">
+  {% include "partials/_member_side.html" %}
+
+  <div>
+    <div class="row g-3">
+      <div class="col-lg-5">
+        <div class="koco-card h-100">
+          <div class="koco-card-flat">
+            <h2 class="h6"><i class="fa fa-building-columns text-leaf"></i> Our bank account</h2>
+            <table class="table table-sm mb-0">
+              <tbody>
+                <tr><th class="w-50">Bank</th><td>{{ site.bank_name|default:"Not set yet" }}</td></tr>
+                <tr><th>Account name</th><td>{{ site.bank_account_name }}</td></tr>
+                <tr><th>Account number</th><td><strong>{{ site.bank_account_number }}</strong></td></tr>
+                {% if site.bank_branch %}<tr><th>Branch</th><td>{{ site.bank_branch }}</td></tr>{% endif %}
+              </tbody>
+            </table>
+          </div>
+          {% if site.bank_notes %}
+            <div class="koco-card-flat">
+              <p class="small-muted mb-0">{{ site.bank_notes|linebreaksbr }}</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="col-lg-7">
+        <div class="koco-card h-100">
+          <div class="koco-card-flat">
+            <h1 class="koco-section-title mb-1">Submit a bank payment</h1>
+            <p class="koco-muted mb-0">
+              After depositing, fill this in. The treasurer matches it with the bank statement before it
+              becomes Confirmed.
+            </p>
+          </div>
+          <div class="koco-card-flat">
+            <form method="post" class="koco-form" enctype="multipart/form-data" novalidate>
+              {% csrf_token %}
+              {% for field in form %}
+                <div class="mb-3">
+                  <label class="form-label" for="{{ field.id_for_label }}">
+                    {{ field.label }}{% if field.field.required %} <span class="required-mark">*</span>{% endif %}
+                  </label>
+                  {% if field.name == 'amount' %}
+                    <div class="input-group">
+                      <span class="input-group-text">KSh</span>
+                      {{ field }}
+                    </div>
+                    <div class="form-help mt-1">You are submitting <strong data-money-preview="amount">KSh 0.00</strong>.</div>
+                  {% else %}
+                    {{ field }}
+                  {% endif %}
+                  {% if field.help_text %}<div class="form-help mt-1">{{ field.help_text|safe }}</div>{% endif %}
+                  {% for error in field.errors %}<div class="field-error">{{ error }}</div>{% endfor %}
+                </div>
+              {% endfor %}
+              <p class="small-muted">A photo of the slip makes verification faster (jpg, png or webp, up to 5 MB).</p>
+              <div class="d-flex flex-wrap gap-2">
+                <button class="koco-btn koco-btn-primary" type="submit">
+                  <i class="fa fa-paper-plane"></i> Submit for verification
+                </button>
+                <a class="koco-btn koco-btn-ghost" href="{% url 'contributions:choose' %}">Back</a>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,93 @@
+{% extends "admin_panel/base_admin.html" %}
+
+{% block admin_content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <div>
+    <h1 class="koco-section-title mb-1">Event calendar</h1>
+    <p class="koco-muted mb-0">Add, change or remove what appears on the public calendar and the Events Sponsored page.</p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a class="koco-btn koco-btn-primary" href="{% url 'admin_panel:event_new' %}">
+      <i class="fa fa-plus"></i> New event
+    </a>
+    <a class="koco-btn koco-btn-outline" href="{% url 'admin_panel:report_list' %}">
+      <i class="fa fa-file-lines"></i> Reports
+    </a>
+  </div>
+</div>
+
+<div class="koco-card mb-4">
+  <div class="koco-card-flat">
+    <h2 class="h6 mb-0">All events</h2>
+    <p class="small-muted">Past and upcoming. Only events marked published show to visitors.</p>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Event</th>
+          <th>Type</th>
+          <th>Starts (EAT)</th>
+          <th>Venue</th>
+          <th>Photo</th>
+          <th>Published</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for event in events %}
+          <tr>
+            <td>
+              <a class="fw-semibold text-decoration-none" href="{{ event.get_absolute_url }}">{{ event.title }}</a>
+              {% if event.is_past %}<div class="small-muted">finished</div>{% endif %}
+            </td>
+            <td>{{ event.get_category_display }}</td>
+            <td>{{ event.starts_at|date:"d M Y H:i" }}</td>
+            <td>{{ event.venue }}</td>
+            <td>{% if event.photo %}<img class="koco-gallery-thumb" style="width:56px;height:42px" src="{{ event.photo.url }}" alt="">{% else %}<span class="small-muted">none</span>{% endif %}</td>
+            <td>{{ event.published|yesno:"yes,no" }}</td>
+            <td class="text-end text-nowrap">
+              <a class="koco-btn koco-btn-outline koco-btn-sm" href="{% url 'admin_panel:event_edit' event.pk %}">
+                <i class="fa fa-pen"></i> Edit
+              </a>
+              <form class="d-inline" method="post" action="{% url 'admin_panel:event_delete' event.pk %}"
+                    data-confirm="Delete '{{ event.title }}' and its reports?">
+                {% csrf_token %}
+                <input type="hidden" name="confirm" value="yes">
+                <button class="koco-btn koco-btn-outline koco-btn-sm text-danger" type="submit">
+                  <i class="fa fa-trash"></i>
+                </button>
+              </form>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="7">
+              <div class="koco-empty">
+                <i class="fa fa-calendar-plus"></i>
+                No events yet.
+                <div class="mt-3">
+                  <a class="koco-btn koco-btn-primary koco-btn-sm" href="{% url 'admin_panel:event_new' %}">Add the first event</a>
+                </div>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<h2 class="koco-section-title">Latest reports</h2>
+{% for report in reports %}
+  <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+    <div>
+      <a class="fw-semibold text-decoration-none" href="{% url 'admin_panel:report_edit' report.pk %}">{{ report.title }}</a>
+      <div class="small-muted">{{ report.event.title }} &middot; {{ report.created_at|date:"d M Y" }}{% if report.emailed_at %} &middot; emailed {{ report.emailed_at|date:"d M Y" }}{% endif %}</div>
+    </div>
+    <a class="small" href="{{ report.get_absolute_url }}">view public page</a>
+  </div>
+{% empty %}
+  <p class="koco-muted">No reports written yet.</p>
+{% endfor %}
+{% endblock %}

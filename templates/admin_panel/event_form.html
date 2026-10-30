@@ -1,0 +1,72 @@
+{% extends "admin_panel/base_admin.html" %}
+
+{% block admin_content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb small">
+    <li class="breadcrumb-item"><a href="{% url 'admin_panel:event_list' %}">Events</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ page_title }}</li>
+  </ol>
+</nav>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="koco-card">
+      <div class="koco-card-flat">
+        <h1 class="koco-section-title mb-1">{{ page_title }}</h1>
+        <p class="koco-muted mb-0">Times are East Africa Time. A photo makes the event easy to spot on the calendar.</p>
+      </div>
+      <div class="koco-card-flat">
+        <form method="post" class="koco-form" enctype="multipart/form-data" novalidate>
+          {% csrf_token %}
+          {% include "partials/_form_fields.html" %}
+          {% if event and event.photo %}
+            <p class="small-muted">Current photo:</p>
+            <img class="koco-gallery-thumb mb-3" src="{{ event.photo.url }}" alt="Current photo">
+          {% endif %}
+          <div class="d-flex flex-wrap gap-2">
+            <button class="koco-btn koco-btn-primary" type="submit"><i class="fa fa-floppy-disk"></i> Save event</button>
+            <a class="koco-btn koco-btn-ghost" href="{% url 'admin_panel:event_list' %}">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="koco-card h-100">
+      <div class="koco-card-flat">
+        <h2 class="h6">Write the report for this event</h2>
+        <p class="small-muted">
+          Save the event first if it is new, then come back and attach the report with photos.
+        </p>
+        <form method="post" action="{% url 'admin_panel:report_new' %}" class="koco-form" enctype="multipart/form-data">
+          {% csrf_token %}
+          {% with form=report_form %}
+            {% include "partials/_form_fields.html" %}
+          {% endwith %}
+          <div class="mb-3">
+            <label class="form-label" for="photoInput">Photos (choose several)</label>
+            <input class="form-control" type="file" id="photoInput" name="photo" accept="image/*" multiple>
+          </div>
+          <button class="koco-btn koco-btn-outline w-100" type="submit">
+            <i class="fa fa-file-lines"></i> Save as a report
+          </button>
+        </form>
+      </div>
+      {% if event %}
+        <div class="koco-card-flat">
+          <h2 class="h6">Reports on this event</h2>
+          {% for report in event.reports.all %}
+            <div class="d-flex justify-content-between border-bottom py-1">
+              <a class="text-decoration-none" href="{% url 'admin_panel:report_edit' report.pk %}">{{ report.title }}</a>
+              <span class="small-muted">{{ report.created_at|date:"d M Y" }}</span>
+            </div>
+          {% empty %}
+            <p class="koco-muted mb-0">None yet.</p>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends "admin_panel/base_admin.html" %}
+
+{% block admin_content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <div>
+    <h1 class="koco-section-title mb-1">Incident inbox</h1>
+    <p class="koco-muted mb-0">Reports raised by members. Answer them and move the status along.</p>
+  </div>
+  <div class="d-flex flex-wrap gap-1">
+    <a class="koco-btn koco-btn-outline koco-btn-sm {% if selected_status == '' %}koco-btn-primary{% endif %}"
+       href="{% url 'admin_panel:incident_list' %}">All</a>
+    {% for value, label in statuses %}
+      <a class="koco-btn koco-btn-outline koco-btn-sm {% if value == selected_status %}koco-btn-primary{% endif %}"
+         href="{% url 'admin_panel:incident_list' %}?status={{ value }}">{{ label }}</a>
+    {% endfor %}
+  </div>
+</div>
+
+<p class="small-muted">
+  {% for status_value, number in counts.items %}
+    {{ number }} {{ status_value|cut:"_"|capfirst }}{% if not forloop.last %} &middot; {% endif %}
+  {% empty %}
+    No reports on record yet.
+  {% endfor %}
+</p>
+
+<div class="koco-card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Member</th>
+          <th>Happened</th>
+          <th>Sent</th>
+          <th>Status</th>
+          <th>Assigned to</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for incident in incidents %}
+          <tr>
+            <td>
+              <a class="fw-semibold text-decoration-none" href="{% url 'admin_panel:incident_detail' incident.pk %}">{{ incident.title }}</a>
+              {% if incident.attachment %}<div class="small-muted"><i class="fa fa-paperclip"></i> attachment</div>{% endif %}
+            </td>
+            <td>
+              {{ incident.member.full_name }}
+              <div class="small-muted">{{ incident.member.membership_no }} &middot; {{ incident.member.phone }}</div>
+            </td>
+            <td>{{ incident.occurred_on|date:"d M Y" }}</td>
+            <td>{{ incident.created_at|date:"d M Y H:i" }}</td>
+            <td><span class="badge text-bg-{{ incident.status_css }}">{{ incident.get_status_display }}</span></td>
+            <td>
+              {% if incident.handling_admin %}
+                {{ incident.handling_admin.get_full_name|default:incident.handling_admin.email }}
+              {% else %}
+                <span class="small-muted">unassigned</span>
+              {% endif %}
+            </td>
+            <td class="text-end">
+              <a class="koco-btn koco-btn-outline koco-btn-sm" href="{% url 'admin_panel:incident_detail' incident.pk %}">Open</a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="7"><div class="koco-empty"><i class="fa fa-folder-open"></i> No incident reports in this view.</div></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% include "partials/_pagination.html" with page_obj=incidents %}
+{% endblock %}

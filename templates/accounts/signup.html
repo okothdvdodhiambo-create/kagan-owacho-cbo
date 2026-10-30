@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% load koc_tags %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-md-9 col-lg-6">
+    <div class="koco-card koco-form">
+      <h1 class="page-title h3 mb-1">Create an account</h1>
+      <p class="koco-lead">An account lets you sign in, pay contributions and track your membership.</p>
+
+      <form method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+        {% include "partials/_form_fields.html" %}
+        <p class="form-help">
+          Your photo is resized automatically. Allowed: JPG, PNG, WEBP, GIF (max 5 MB).
+        </p>
+        <button class="koco-btn koco-btn-primary w-100 justify-content-center" type="submit">
+          <i class="fa fa-user-plus"></i> Create account
+        </button>
+      </form>
+
+      <div class="d-flex justify-content-between align-items-center mt-3 small">
+        <a href="{% url 'accounts:login' %}">I already have an account</a>
+        <a href="{% url 'membership:register' %}">Register as a member instead</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

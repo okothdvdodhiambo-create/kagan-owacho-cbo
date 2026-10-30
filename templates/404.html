@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="koco-card text-center py-5">
+  <i class="fa fa-compass fa-2x mb-3"></i>
+  <h1 class="h3">We could not find that page</h1>
+  <p class="small-muted mb-4">The link may be mistyped, or the page may have been moved by the committee.</p>
+  <div class="d-flex flex-wrap gap-2 justify-content-center">
+    <a class="koco-btn koco-btn-primary" href="{% url 'core:home' %}"><i class="fa fa-house"></i> Home page</a>
+    <a class="koco-btn koco-btn-outline" href="{% url 'events:list' %}"><i class="fa fa-hand-holding-heart"></i> Events sponsored</a>
+    <a class="koco-btn koco-btn-outline" href="{% url 'membership:register' %}"><i class="fa fa-user-plus"></i> Become a member</a>
+  </div>
+</div>
+{% endblock %}

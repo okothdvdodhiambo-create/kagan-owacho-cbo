@@ -1,0 +1,12 @@
+Hello,
+
+A new report from {{ org_name }} is on the website.
+
+Event: {{ event.title }} ({{ event.starts_at|date:"d M Y" }} at {{ event.venue }})
+Report: {{ report.title }}
+
+{{ report.body }}
+
+Read it with the photos on the "Events Sponsored" page of the website.
+
+{{ org_name }} - Kagan Ward, Rangwe, Homa Bay County

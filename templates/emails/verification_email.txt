@@ -1,0 +1,12 @@
+Hello {{ member.full_name }},
+
+Thank you for registering as a member of {{ org_name }}.
+
+Your verification code is: {{ code }}
+
+The code works for {{ minutes }} minutes and can be tried 5 times. Enter it on the
+verification page to finish your membership. If you did not ask to join, ignore this
+email and nothing will happen.
+
+{{ org_name }}
+Kagan Ward, Rangwe Constituency, Homa Bay County

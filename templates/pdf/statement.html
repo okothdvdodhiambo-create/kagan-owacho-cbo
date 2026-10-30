@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Contribution statement {{ member.membership_no }}</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 18mm 16mm 20mm 16mm;
+      @frame footer_frame {
+        -pdf-frame-content: footerContent;
+        bottom: 10mm; margin-left: 16mm; margin-right: 16mm; height: 12mm;
+      }
+    }
+    body { font-family: Helvetica, Arial, sans-serif; font-size: 10pt; color: #16231d; }
+    h1 { font-size: 15pt; margin: 0 0 2mm 0; color: #0b4d39; }
+    h2 { font-size: 11pt; margin: 6mm 0 2mm 0; color: #0b4d39; }
+    table { width: 100%; border-collapse: collapse; }
+    .head td { vertical-align: middle; padding: 0 0 4mm 0; border-bottom: 2px solid #c8a24a; }
+    .org { font-size: 16pt; font-weight: bold; color: #0b4d39; letter-spacing: 0.5pt; }
+    .motto { font-size: 9pt; color: #4c5a53; }
+    .meta { font-size: 8.5pt; color: #4c5a53; text-align: right; }
+    .logo { width: 24mm; }
+    .info td { padding: 1.2mm 0; font-size: 9.5pt; }
+    .info .k { color: #4c5a53; width: 45%; }
+    .rows th { background: #0b4d39; color: #ffffff; font-size: 8.5pt; padding: 2mm; text-align: left; }
+    .rows td { border-bottom: 0.5pt solid #d9e2dd; padding: 1.8mm 2mm; font-size: 9pt; }
+    .num { text-align: right; }
+    .total td { background: #f1f6f3; font-weight: bold; border-top: 1.5pt solid #0b4d39; }
+    .seal { text-align: center; }
+    .seal .ring { border: 2px double #c8a24a; padding: 3mm; font-size: 7.5pt; color: #8a6a1c; }
+    .sign td { padding-top: 10mm; font-size: 9pt; width: 50%; }
+    .line { border-bottom: 0.8pt solid #16231d; height: 8mm; }
+    .note { font-size: 8pt; color: #4c5a53; padding-top: 4mm; }
+    .footer { font-size: 8pt; color: #4c5a53; text-align: center; }
+  </style>
+</head>
+<body>
+
+<table class="head">
+  <tr>
+    <td class="logo">
+      {% if logo_uri %}<img src="{{ logo_uri }}" alt="logo" style="width:22mm">{% endif %}
+    </td>
+    <td>
+      <div class="org">{{ site.organization_name }}</div>
+      {% if site.motto %}<div class="motto">{{ site.motto }}</div>{% endif %}
+      <div class="motto">{{ site.location_label }}</div>
+      <div class="motto">Tel {{ site.whatsapp_number }} &middot; {{ site.contact_email }}</div>
+    </td>
+    <td class="meta">
+      <strong>CONTRIBUTION STATEMENT</strong><br>
+      Reference: {{ reference }}<br>
+      Generated: {{ generated_at|date:"d M Y" }} at {{ generated_at|date:"H:i" }} EAT
+    </td>
+  </tr>
+</table>
+
+<h2>Member details</h2>
+<table class="info">
+  <tr><td class="k">Membership number</td><td><strong>{{ member.membership_no }}</strong></td></tr>
+  <tr><td class="k">Full name</td><td>{{ member.full_name }}</td></tr>
+  <tr><td class="k">Phone</td><td>{{ member.phone }}</td></tr>
+  <tr><td class="k">Email</td><td>{{ member.email }}</td></tr>
+  <tr><td class="k">Location</td><td>{{ member.location }}{% if member.sub_location %}, {{ member.sub_location }}{% endif %}</td></tr>
+  <tr><td class="k">Membership status</td><td>{{ member.get_status_display }}{% if member.verified_at %} since {{ member.verified_at|date:"d M Y" }}{% endif %}</td></tr>
+</table>
+
+<h2>Contributions</h2>
+<table class="rows">
+  <thead>
+    <tr>
+      <th>Date</th>
+      <th>Method</th>
+      <th>Reference</th>
+      <th>Status</th>
+      <th class="num">Amount (KSh)</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in contributions %}
+      <tr>
+        <td>{{ row.created_at|date:"d/m/Y" }}</td>
+        <td>{{ row.get_method_display }}</td>
+        <td>{{ row.reference|default:"-" }}</td>
+        <td>{{ row.get_status_display }}</td>
+        <td class="num">{{ row.amount|floatformat:2 }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="5">No contributions recorded yet.</td></tr>
+    {% endfor %}
+    <tr class="total">
+      <td colspan="4">Total confirmed ({% if totals.confirmed_count %}{{ totals.confirmed_count }} payment{{ totals.confirmed_count|pluralize }}{% else %}0{% endif %})</td>
+      <td class="num">{{ totals.confirmed_total|floatformat:2 }}</td>
+    </tr>
+    <tr class="total">
+      <td colspan="4">Awaiting verification ({{ totals.pending_count }})</td>
+      <td class="num">{{ totals.pending_total|floatformat:2 }}</td>
+    </tr>
+  </tbody>
+</table>
+
+<table class="sign">
+  <tr>
+    <td>
+      <div class="line"></div>
+      Authorised signature<br>
+      <span style="color:#4c5a53">Treasurer, {{ site.organization_name }}</span>
+    </td>
+    <td class="seal">
+      <div class="ring">
+        <strong>{{ site.organization_name }}</strong><br>
+        OFFICIAL STATEMENT<br>
+        {{ generated_at|date:"d M Y" }}
+      </div>
+    </td>
+  </tr>
+</table>
+
+<p class="note">
+  This statement is computer generated from the {{ site.organization_name }} records and shows every
+  contribution logged against membership {{ member.membership_no }} up to {{ generated_at|date:"d M Y" }}.
+  Entries marked "Awaiting verification" are not yet counted as received. Report any difference to
+  {{ site.contact_email }} within 14 days.
+</p>
+
+<div id="footerContent" class="footer">
+  {{ site.organization_name }} &middot; Kagan Ward, Rangwe Constituency, Homa Bay County, Kenya &middot;
+  Page <pdf:pagenumber> of <pdf:pagecount>
+</div>
+
+</body>
+</html>

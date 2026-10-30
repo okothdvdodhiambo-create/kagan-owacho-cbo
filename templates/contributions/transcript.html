@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% load koc_tags %}
+
+{% block content %}
+<div class="koco-shell">
+  {% include "partials/_member_side.html" %}
+
+  <div>
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+      <div>
+        <h1 class="koco-section-title mb-1">My contribution history</h1>
+        <p class="koco-muted mb-0">
+          {{ member.full_name }} &middot; <strong>{{ member.membership_no }}</strong>
+        </p>
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        <a class="koco-btn koco-btn-outline" href="{% url 'contributions:statement' %}" target="_blank" rel="noopener">
+          <i class="fa fa-print"></i> Print statement
+        </a>
+        <a class="koco-btn koco-btn-primary" href="{% url 'contributions:statement' %}?download=1">
+          <i class="fa fa-file-pdf"></i> Download PDF
+        </a>
+      </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+      <div class="col-6 col-lg-3">
+        <div class="koco-stat-tile">
+          <div class="num">KSh {{ totals.confirmed_total|money }}</div>
+          <div class="cap">Confirmed total</div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="koco-stat-tile gold">
+          <div class="num">{{ totals.confirmed_count }}</div>
+          <div class="cap">Confirmed gifts</div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="koco-stat-tile">
+          <div class="num">KSh {{ totals.pending_total|money }}</div>
+          <div class="cap">Awaiting check</div>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3">
+        <div class="koco-stat-tile">
+          <div class="num">{{ totals.all_count }}</div>
+          <div class="cap">All entries</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="koco-card">
+      <div class="koco-card-flat">
+        <form method="get" class="row g-2 align-items-end">
+          <div class="col-6 col-lg-4">
+            <label class="form-label small-muted" for="method">Method</label>
+            <select class="form-select form-select-sm" id="method" name="method">
+              <option value="">All methods</option>
+              {% for value, label in methods %}
+                <option value="{{ value }}" {% if value == selected_method %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-6 col-lg-4">
+            <label class="form-label small-muted" for="status">Status</label>
+            <select class="form-select form-select-sm" id="status" name="status">
+              <option value="">Any status</option>
+              {% for value, label in statuses %}
+                <option value="{{ value }}" {% if value == selected_status %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-lg-4">
+            <button class="koco-btn koco-btn-outline koco-btn-sm" type="submit">
+              <i class="fa fa-filter"></i> Apply filter
+            </button>
+            {% if selected_method or selected_status %}
+              <a class="koco-btn koco-btn-ghost koco-btn-sm" href="{% url 'contributions:transcript' %}">Clear</a>
+            {% endif %}
+          </div>
+        </form>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th scope="col">Date</th>
+              <th scope="col">Method</th>
+              <th scope="col">Reference</th>
+              <th scope="col" class="text-end">Amount (KSh)</th>
+              <th scope="col">Status</th>
+              <th scope="col">Slip</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in contributions %}
+              <tr>
+                <td>
+                  {{ row.created_at|date:"d M Y" }}
+                  <div class="small-muted">{{ row.created_at|date:"H:i" }}</div>
+                </td>
+                <td>{{ row.get_method_display }}</td>
+                <td>
+                  {% if row.reference %}<span class="font-monospace">{{ row.reference }}</span>{% else %}<span class="small-muted">-</span>{% endif %}
+                  {% if row.transaction_id %}<div class="small-muted">MPESA {{ row.transaction_id }}</div>{% endif %}
+                </td>
+                <td class="text-end">
+                  <strong {% if row.status == 'rejected' or row.status == 'failed' %}class="strike"{% endif %}>{{ row.amount|money }}</strong>
+                </td>
+                <td>
+                  <span class="badge text-bg-{% if row.status == 'confirmed' %}success{% elif row.status == 'rejected' or row.status == 'failed' %}danger{% elif row.status == 'cancelled' %}secondary{% else %}warning text-dark{% endif %}">
+                    {{ row.get_status_display }}
+                  </span>
+                  {% if row.result_message %}<div class="small-muted">{{ row.result_message }}</div>{% endif %}
+                </td>
+                <td>
+                  {% if row.receipt %}
+                    <a href="{{ row.receipt.url }}" target="_blank" rel="noopener"><i class="fa fa-image text-leaf"></i> view</a>
+                  {% else %}
+                    <span class="small-muted">-</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="6">
+                  <div class="koco-empty">
+                    <i class="fa fa-receipt"></i>
+                    Nothing recorded yet with this filter.
+                    <div class="mt-3">
+                      <a class="koco-btn koco-btn-primary koco-btn-sm" href="{% url 'contributions:choose' %}">Send a contribution</a>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="koco-card-flat">
+        <p class="small-muted mb-0">
+          The PDF statement carries our logo, seal, your membership number and the authorising signature line.
+          Print it for your records or for the meeting.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

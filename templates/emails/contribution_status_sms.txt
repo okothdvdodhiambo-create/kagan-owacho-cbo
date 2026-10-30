@@ -1,0 +1,1 @@
+{{ org_name }}: your contribution of KSh {{ amount }} is now {{ contribution.get_status_display }}. Ref {{ contribution.reference|default:"-" }}. Log in to view your transcript.

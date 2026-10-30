@@ -1,0 +1,366 @@
+/* ==========================================================================
+   KAGAN OWACHO CBO - site styles (works with Bootstrap 5)
+   Palette: deep green + royal blue + gold, animated header edge.
+   ========================================================================== */
+
+:root {
+  --koco-green: #0b4d39;
+  --koco-green-dark: #063528;
+  --koco-blue: #10406e;
+  --koco-gold: #d9a441;
+  --koco-gold-light: #f2cd7c;
+  --koco-ink: #1c2126;
+  --koco-muted: #61707a;
+  --koco-bg: #f4f6f5;
+  --koco-footer: #14202b;
+  --koco-radius: 14px;
+  --koco-shadow: 0 10px 30px rgba(6, 53, 40, 0.12);
+}
+
+* { -webkit-tap-highlight-color: transparent; }
+
+body {
+  background: var(--koco-bg);
+  color: var(--koco-ink);
+  font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+main { flex: 1 0 auto; }
+
+a { color: var(--koco-green); }
+a:hover { color: var(--koco-green-dark); }
+
+.text-gold { color: var(--koco-gold) !important; }
+.text-leaf { color: var(--koco-green) !important; }
+.bg-leaf { background: var(--koco-green) !important; }
+
+/* ------------------------------------------------------------- header ---- */
+.koco-header {
+  position: relative;
+  color: #fff;
+  padding: 1.15rem 0 1.25rem;
+  background: linear-gradient(115deg, var(--koco-green-dark), var(--koco-green) 32%, var(--koco-blue) 68%, #7a5a18 100%);
+  background-size: 220% 220%;
+  animation: kocoHeaderDrift 18s ease-in-out infinite;
+  box-shadow: 0 6px 24px rgba(4, 40, 30, 0.28);
+}
+
+.koco-header::before,
+.koco-header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--koco-gold), #fff6df, var(--koco-gold-light), var(--koco-gold));
+  background-size: 300% 100%;
+  animation: kocoEdgeGlow 6s linear infinite;
+}
+.koco-header::before { top: 0; }
+.koco-header::after { bottom: 0; }
+
+@keyframes kocoHeaderDrift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes kocoEdgeGlow {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 300% 50%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .koco-header, .koco-header::before, .koco-header::after { animation: none; }
+}
+
+.koco-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.koco-brand { display: flex; align-items: center; gap: .85rem; color: #fff; text-decoration: none; }
+.koco-brand:hover { color: #fff; }
+
+.koco-logo {
+  width: 62px;
+  height: 62px;
+  object-fit: contain;
+  border-radius: 50%;
+  background: #fff;
+  padding: 5px;
+  box-shadow: 0 0 0 3px rgba(217, 164, 65, .75);
+}
+.koco-logo-mark {
+  width: 62px; height: 62px; border-radius: 50%;
+  display: grid; place-items: center;
+  font-weight: 800; font-size: 1.35rem; letter-spacing: 1px;
+  background: rgba(255, 255, 255, .14);
+  border: 2px dashed var(--koco-gold-light);
+  color: #fff;
+}
+
+.koco-brand-name {
+  margin: 0;
+  font-size: clamp(1.15rem, 3.4vw, 2rem);
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  line-height: 1.1;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, .25);
+}
+.koco-brand-motto {
+  margin: .2rem 0 0;
+  font-size: clamp(.78rem, 2.2vw, .95rem);
+  color: var(--koco-gold-light);
+  font-style: italic;
+  max-width: 46ch;
+}
+
+.koco-user { display: flex; align-items: center; gap: .5rem; }
+.koco-avatar {
+  width: 44px; height: 44px; border-radius: 50%;
+  object-fit: cover; border: 2px solid var(--koco-gold-light);
+  background: #fff; color: var(--koco-green); font-weight: 700;
+  display: grid; place-items: center; text-transform: uppercase;
+}
+.koco-user-toggle { display: flex; align-items: center; gap: .5rem; border: 0; background: transparent; color: #fff; }
+.koco-user-toggle .caret { font-size: .7rem; opacity: .8; }
+.koco-dropdown {
+  border: 0; border-radius: 12px; box-shadow: var(--koco-shadow); padding: .4rem;
+  min-width: 235px; margin-top: .55rem !important;
+}
+.koco-dropdown .dropdown-header { color: var(--koco-muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; }
+.koco-dropdown .dropdown-item { border-radius: 9px; padding: .5rem .65rem; color: var(--koco-ink); }
+.koco-dropdown .dropdown-item:hover { background: #eef6f2; color: var(--koco-green-dark); }
+.koco-guest-actions { display: flex; gap: .45rem; }
+
+/* ------------------------------------------------------------ nav bar ---- */
+.koco-nav {
+  background: #fff;
+  border-bottom: 1px solid #e3e8e6;
+  box-shadow: 0 2px 12px rgba(16, 64, 110, .06);
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+}
+.koco-nav .navbar { padding: .2rem 0; }
+.koco-nav .nav-link {
+  color: var(--koco-ink);
+  font-weight: 600;
+  border-radius: 999px;
+  padding: .5rem 1rem !important;
+  margin: .15rem .1rem;
+  transition: background .18s ease, color .18s ease;
+}
+.koco-nav .nav-link:hover { background: #eaf3ee; color: var(--koco-green-dark); }
+.koco-nav .nav-link.active {
+  background: linear-gradient(100deg, var(--koco-green), var(--koco-blue));
+  color: #fff;
+}
+.koco-nav .navbar-toggler { border: 1px solid var(--koco-green); color: var(--koco-green); }
+.koco-nav-cta { display: flex; gap: .5rem; }
+
+/* --------------------------------------------------------------- main ---- */
+.page-title { font-weight: 800; color: var(--koco-green-dark); letter-spacing: -.01em; }
+.koco-lead { color: var(--koco-muted); }
+
+.koco-card {
+  background: #fff;
+  border: 1px solid #e6ebe8;
+  border-radius: var(--koco-radius);
+  box-shadow: var(--koco-shadow);
+  padding: 1.25rem;
+}
+.koco-card-flat { box-shadow: none; }
+.koco-section-title { font-size: 1.05rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--koco-green); }
+
+.koco-btn {
+  display: inline-flex; align-items: center; gap: .45rem;
+  border-radius: 999px; border: 0; padding: .6rem 1.15rem;
+  font-weight: 600; text-decoration: none; transition: transform .12s ease, box-shadow .12s ease;
+}
+.koco-btn:active { transform: translateY(1px); }
+.koco-btn-primary { background: linear-gradient(100deg, var(--koco-green), var(--koco-blue)); color: #fff; box-shadow: 0 6px 18px rgba(11, 77, 57, .28); }
+.koco-btn-primary:hover { color: #fff; box-shadow: 0 8px 22px rgba(11, 77, 57, .38); }
+.koco-btn-gold { background: linear-gradient(100deg, var(--koco-gold), var(--koco-gold-light)); color: #3a2a05; }
+.koco-btn-gold:hover { color: #3a2a05; }
+.koco-btn-outline { background: #fff; border: 1.5px solid var(--koco-green); color: var(--koco-green-dark); }
+.koco-btn-outline:hover { background: #eef6f2; color: var(--koco-green-dark); }
+.koco-btn-ghost { background: rgba(255,255,255,.16); color: #fff; border: 1px solid rgba(255,255,255,.45); }
+.koco-btn-ghost:hover { color: #fff; background: rgba(255,255,255,.26); }
+.koco-btn-sm { padding: .38rem .8rem; font-size: .86rem; }
+
+/* ------------------------------------------------------------ home ------- */
+.home-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; }
+@media (min-width: 900px) {
+  .home-grid { grid-template-columns: 46% 54%; align-items: center; }
+}
+.home-copy h2 { font-size: clamp(1.5rem, 3.4vw, 2.35rem); font-weight: 800; color: var(--koco-green-dark); }
+.home-copy .kicker {
+  display: inline-block; background: var(--koco-gold-light); color: #4a3410;
+  border-radius: 999px; padding: .25rem .8rem; font-weight: 700; font-size: .8rem; letter-spacing: .04em;
+}
+.home-stats { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 1.1rem; }
+.home-stat {
+  background: #fff; border: 1px solid #e6ebe8; border-radius: 12px; padding: .7rem 1rem;
+  box-shadow: 0 6px 16px rgba(16, 64, 110, .07); min-width: 130px;
+}
+.home-stat strong { display: block; font-size: 1.35rem; color: var(--koco-green); }
+.home-stat span { font-size: .8rem; color: var(--koco-muted); text-transform: uppercase; letter-spacing: .05em; }
+
+/* --------------------------------------------------------- slider -------- */
+.koco-slider {
+  position: relative; overflow: hidden; border-radius: 18px;
+  box-shadow: 0 18px 40px rgba(6, 53, 40, .22); background: #0b1c18;
+}
+.koco-slider-stage { position: relative; aspect-ratio: 16 / 9; }
+@media (max-width: 575px) { .koco-slider-stage { aspect-ratio: 4 / 3; } }
+.koco-slide {
+  position: absolute; inset: 0; opacity: 0; transition: opacity .9s ease, transform .9s ease;
+  transform: scale(1.03);
+}
+.koco-slide.is-active { opacity: 1; transform: scale(1); }
+.koco-slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.koco-slide figcaption {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: .9rem 1rem;
+  background: linear-gradient(180deg, transparent, rgba(4, 24, 18, .82));
+  color: #fff; font-weight: 600; font-size: .95rem;
+}
+.koco-slider-arrow {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 42px; height: 42px; border-radius: 50%; border: 0;
+  background: rgba(255, 255, 255, .85); color: var(--koco-green-dark);
+  display: grid; place-items: center; cursor: pointer; font-size: 1.1rem;
+}
+.koco-slider-arrow:hover { background: #fff; }
+.koco-slider-arrow.prev { left: .6rem; }
+.koco-slider-arrow.next { right: .6rem; }
+.koco-slider-dots { position: absolute; bottom: .7rem; left: 0; right: 0; display: flex; gap: .4rem; justify-content: center; }
+.koco-slider-dot { width: 10px; height: 10px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, .55); cursor: pointer; padding: 0; }
+.koco-slider-dot.is-active { background: var(--koco-gold); width: 26px; border-radius: 999px; }
+.koco-slider-empty { aspect-ratio: 16/9; display: grid; place-items: center; color: #cfe3da; padding: 1rem; text-align: center; }
+
+/* ----------------------------------------------------------- footer ------ */
+.koco-footer {
+  margin-top: 3rem;
+  color: #dbe6ef;
+  background: radial-gradient(1000px 320px at 12% 0%, #1d3140, var(--koco-footer) 60%);
+  padding: 2.2rem 0 1.2rem;
+  border-top: 4px solid var(--koco-gold);
+}
+.koco-footer a { color: #dbe6ef; text-decoration: none; }
+.koco-footer a:hover { color: var(--koco-gold-light); }
+.koco-footer-brand { display: flex; gap: .8rem; align-items: center; }
+.koco-footer-logo {
+  width: 54px; height: 54px; border-radius: 50%; object-fit: contain; background: #fff; padding: 4px;
+}
+.koco-footer-mark {
+  width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center;
+  border: 2px dashed var(--koco-gold); font-weight: 800; color: #fff;
+}
+.koco-footer-name { text-transform: uppercase; letter-spacing: .08em; font-weight: 800; margin: 0; font-size: 1.02rem; }
+.koco-footer-sub { margin: .1rem 0 0; color: var(--koco-gold-light); font-size: .82rem; }
+.koco-footer-title { font-size: .78rem; text-transform: uppercase; letter-spacing: .1em; color: var(--koco-gold); margin-bottom: .6rem; }
+.koco-footer-list { list-style: none; padding: 0; margin: 0; display: grid; gap: .35rem; font-size: .92rem; }
+.koco-footer-social { display: flex; flex-wrap: wrap; gap: .55rem; margin-top: .35rem; }
+.koco-footer-social a {
+  width: 40px; height: 40px; border-radius: 11px; display: grid; place-items: center;
+  background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .16); font-size: 1.05rem;
+}
+.koco-footer-social a:hover { background: var(--koco-gold); color: #23190a; }
+.koco-footer-bottom {
+  border-top: 1px solid rgba(255, 255, 255, .12);
+  margin-top: 1.6rem; padding-top: .9rem; font-size: .85rem;
+  display: flex; justify-content: space-between; gap: .75rem; flex-wrap: wrap;
+}
+
+/* -------------------------------------------------------- dashboards ---- */
+.koco-shell { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.25rem; }
+@media (min-width: 992px) { .koco-shell { grid-template-columns: 265px minmax(0, 1fr); } }
+
+.koco-side {
+  background: #fff; border: 1px solid #e6ebe8; border-radius: var(--koco-radius);
+  padding: .85rem; box-shadow: var(--koco-shadow); height: fit-content;
+}
+.koco-side-title { font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; color: var(--koco-muted); padding: .35rem .6rem; }
+.koco-side-link {
+  display: flex; align-items: center; gap: .6rem; padding: .6rem .65rem; border-radius: 10px;
+  color: var(--koco-ink); text-decoration: none; font-weight: 600; font-size: .95rem;
+}
+.koco-side-link i { color: var(--koco-green); width: 18px; text-align: center; }
+.koco-side-link:hover { background: #eef6f2; color: var(--koco-green-dark); }
+.koco-side-link.active { background: linear-gradient(100deg, var(--koco-green), var(--koco-blue)); color: #fff; }
+.koco-side-link.active i { color: var(--koco-gold-light); }
+.koco-side-toggle { width: 100%; margin-bottom: .6rem; }
+@media (min-width: 992px) { .koco-side-toggle { display: none; } }
+@media (max-width: 991.98px) { .koco-side[data-collapsed="true"] .koco-side-body { display: none; } }
+
+.koco-member-card {
+  background: linear-gradient(120deg, var(--koco-green-dark), var(--koco-blue));
+  color: #fff; border-radius: var(--koco-radius); padding: 1.1rem; box-shadow: var(--koco-shadow);
+}
+.koco-member-card .label { font-size: .74rem; letter-spacing: .08em; text-transform: uppercase; color: var(--koco-gold-light); }
+.koco-member-card .value { font-size: 1.1rem; font-weight: 700; }
+
+.koco-stat-tile {
+  border-radius: var(--koco-radius); padding: 1rem; background: #fff; border: 1px solid #e6ebe8;
+  box-shadow: var(--koco-shadow); height: 100%;
+}
+.koco-stat-tile .num { font-size: 1.75rem; font-weight: 800; color: var(--koco-green); }
+.koco-stat-tile .cap { color: var(--koco-muted); font-size: .85rem; text-transform: uppercase; letter-spacing: .05em; }
+.koco-stat-tile.gold .num { color: #a9781f; }
+
+/* -------------------------------------------------------------- forms ---- */
+.koco-form .form-label { font-weight: 600; font-size: .92rem; }
+.required-mark { color: #b02a37; }
+.form-control, .form-select { border-radius: 10px; border-color: #d7e0dc; }
+.form-control:focus, .form-select:focus { border-color: var(--koco-green); box-shadow: 0 0 0 .2rem rgba(11, 77, 57, .14); }
+.form-radios ul { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: .85rem; }
+.form-radios label { display: flex; align-items: center; gap: .4rem; font-weight: 500; }
+.field-error { color: #b02a37; font-size: .85rem; margin-top: .25rem; }
+.form-help { color: var(--koco-muted); font-size: .84rem; }
+.code-input { letter-spacing: .55rem; font-weight: 800; }
+
+/* ------------------------------------------------------------ tables ---- */
+.table-koco { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: var(--koco-shadow); }
+.table-koco thead th { background: #eef6f2; color: var(--koco-green-dark); font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; }
+.table-koco td, .table-koco th { vertical-align: middle; }
+.table-responsive { border-radius: 12px; }
+
+.badge-soft-success { background: #e4f6ec; color: #12693f; }
+.badge-soft-warning { background: #fff6e0; color: #8a6212; }
+.badge-soft-danger { background: #fdeaea; color: #a02020; }
+.badge-soft-info { background: #e8f1fb; color: #1d5490; }
+.badge-soft-secondary { background: #eef0f1; color: #4d5660; }
+
+/* ------------------------------------------------------------- events ---- */
+.event-card { overflow: hidden; padding: 0; display: flex; flex-direction: column; }
+.event-card img { width: 100%; height: 190px; object-fit: cover; }
+.event-card .body { padding: 1rem 1.1rem 1.2rem; display: flex; flex-direction: column; gap: .5rem; flex: 1; }
+.event-date { font-size: .82rem; font-weight: 700; color: #a9781f; text-transform: uppercase; letter-spacing: .04em; }
+.event-when { display: inline-flex; align-items: center; gap: .4rem; }
+
+#koco-calendar { background: #fff; border-radius: var(--koco-radius); padding: 1rem; box-shadow: var(--koco-shadow); }
+#koco-calendar .fc-toolbar-title { font-size: 1.15rem; color: var(--koco-green-dark); }
+#koco-calendar .fc-button-primary { background: var(--koco-green); border-color: var(--koco-green-dark); }
+#koco-calendar .fc-daygrid-event { cursor: pointer; }
+.fc-event-modal-backdrop { position: fixed; inset: 0; background: rgba(8, 20, 16, .5); display: grid; place-items: center; z-index: 1080; padding: 1rem; }
+.fc-event-modal { background: #fff; border-radius: 14px; max-width: 460px; width: 100%; padding: 1.2rem; box-shadow: 0 24px 60px rgba(0, 0, 0, .3); }
+
+/* --------------------------------------------------------- misc/utils ---- */
+.koco-empty { text-align: center; color: var(--koco-muted); padding: 2.4rem 1rem; }
+.koco-empty i { font-size: 2rem; color: var(--koco-gold); display: block; margin-bottom: .6rem; }
+.koco-divider { height: 1px; background: #e6ebe8; margin: 1.4rem 0; }
+.koco-note { background: #fff8e6; border: 1px solid #f0dca6; border-radius: 12px; padding: .8rem 1rem; font-size: .92rem; color: #6b4f10; }
+.koco-console { background: #10201a; color: #d6f5e5; border-radius: 10px; padding: .7rem .9rem; font-family: ui-monospace, Consolas, monospace; font-size: .85rem; }
+.koco-map { width: 100%; height: 360px; border: 0; border-radius: var(--koco-radius); box-shadow: var(--koco-shadow); }
+.koco-photo { width: 100%; height: 150px; object-fit: cover; border-radius: 10px; }
+.koco-gallery-thumb { width: 92px; height: 92px; object-fit: cover; border-radius: 10px; border: 1px solid #e6ebe8; }
+.koco-alert-stack { display: grid; gap: .6rem; }
+.strike { text-decoration: line-through; color: var(--koco-muted); }
+.small-muted { color: var(--koco-muted); font-size: .85rem; }

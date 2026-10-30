@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% load koc_tags %}
+
+{% block content %}
+<div class="koco-shell">
+  <div class="koco-side" data-side data-collapsed="true">
+    <button class="koco-btn koco-btn-outline koco-btn-sm koco-side-toggle" type="button"
+            data-side-toggle aria-expanded="false" aria-controls="adminSideBody">
+      <i class="fa fa-bars"></i> Admin menu
+    </button>
+    <div class="koco-side-body" id="adminSideBody">
+      <p class="koco-side-title">Overview</p>
+      <a class="koco-side-link {% if active_section == 'overview' %}active{% endif %}" href="{% url 'admin_panel:dashboard' %}">
+        <i class="fa fa-chart-simple"></i> Dashboard
+      </a>
+
+      <p class="koco-side-title">People</p>
+      <a class="koco-side-link {% if active_section == 'members' %}active{% endif %}" href="{% url 'admin_panel:member_list' %}">
+        <i class="fa fa-users"></i> Members
+      </a>
+      <a class="koco-side-link {% if active_section == 'contributions' %}active{% endif %}" href="{% url 'admin_panel:contribution_list' %}">
+        <i class="fa fa-coins"></i> Contributions
+      </a>
+      <a class="koco-side-link {% if active_section == 'incidents' %}active{% endif %}" href="{% url 'admin_panel:incident_list' %}">
+        <i class="fa fa-triangle-exclamation"></i> Incidents
+      </a>
+
+      <p class="koco-side-title">Content</p>
+      <a class="koco-side-link {% if active_section == 'messages' %}active{% endif %}" href="{% url 'admin_panel:campaign_list' %}">
+        <i class="fa fa-bullhorn"></i> Announcements
+      </a>
+      <a class="koco-side-link {% if active_section == 'messages' %}active{% endif %}" href="{% url 'admin_panel:contact_list' %}">
+        <i class="fa fa-inbox"></i> Member messages
+      </a>
+      <a class="koco-side-link {% if active_section == 'events' %}active{% endif %}" href="{% url 'admin_panel:event_list' %}">
+        <i class="fa fa-calendar-days"></i> Events
+      </a>
+      <a class="koco-side-link {% if active_section == 'reports' %}active{% endif %}" href="{% url 'admin_panel:report_list' %}">
+        <i class="fa fa-file-lines"></i> Event reports
+      </a>
+
+      <p class="koco-side-title">Site</p>
+      <a class="koco-side-link {% if active_section == 'settings' %}active{% endif %}" href="{% url 'admin_panel:settings_home' %}">
+        <i class="fa fa-sliders"></i> Site settings
+      </a>
+      <a class="koco-side-link {% if active_section == 'audit' %}active{% endif %}" href="{% url 'admin_panel:audit_list' %}">
+        <i class="fa fa-clock-rotate-left"></i> Audit log
+      </a>
+      <a class="koco-side-link" href="{% url 'admin:index' %}">
+        <i class="fa fa-toolbox"></i> Expert admin
+      </a>
+
+      <div class="koco-divider"></div>
+      <form method="post" action="{% url 'accounts:logout' %}">
+        {% csrf_token %}
+        <button class="koco-btn koco-btn-ghost w-100" type="submit">
+          <i class="fa fa-right-from-bracket"></i> Log out
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div>
+    {% block admin_content %}{% endblock %}
+  </div>
+</div>
+{% endblock %}

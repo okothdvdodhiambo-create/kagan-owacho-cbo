@@ -1,0 +1,15 @@
+New incident report
+
+Member: {{ member.full_name }} ({{ member.membership_no }})
+Phone: {{ member.phone }}
+Email: {{ member.email }}
+Title: {{ incident.title }}
+Date of incident: {{ incident.occurred_on }}
+Received: {{ incident.created_at }}
+
+{% if incident.attachment %}Attachment: {{ incident.attachment.url }}{% else %}Attachment: none{% endif %}
+
+Description:
+{{ incident.description }}
+
+Open the admin inbox to respond and set the status.

@@ -1,0 +1,16 @@
+Hello {{ member.full_name }},
+
+Your contribution of KSh {{ amount }} recorded on {{ contribution.created_at|date:"d M Y" }} is now:
+{{ contribution.get_status_display }}
+
+Method: {{ contribution.get_method_display }}
+Reference: {{ contribution.reference|default:"-" }}
+{% if contribution.payment_date %}Payment date: {{ contribution.payment_date }}{% endif %}
+{% if contribution.note %}Note from the treasurer: {{ contribution.note }}{% endif %}
+
+The full list of your giving, with a PDF you can print, is under
+My dashboard > Contribution history.
+
+Thank you for supporting school fees in Kagan.
+
+{{ org_name }}

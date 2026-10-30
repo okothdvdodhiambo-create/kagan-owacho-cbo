@@ -1,0 +1,35 @@
+<nav class="koco-nav" aria-label="Main navigation">
+  <div class="container">
+    <nav class="navbar navbar-expand-lg px-0">
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
+              aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="mainNav">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          {% for entry in NAV_ITEMS %}
+            <li class="nav-item">
+              <a class="nav-link {% if entry.active %}active{% endif %}" href="{{ entry.url }}">{{ entry.item.title }}</a>
+            </li>
+          {% empty %}
+            <li class="nav-item"><a class="nav-link active" href="{% url 'core:home' %}">Home</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'core:about' %}">About</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'events:list' %}">Events Sponsored</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'events:calendar' %}">Event Calendar</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'membership:register' %}">Register as a Member</a></li>
+          {% endfor %}
+        </ul>
+        <div class="koco-nav-cta">
+          {% if user.is_authenticated and user.membership and not user.membership.verified %}
+            <a class="koco-btn koco-btn-gold koco-btn-sm" href="{% url 'membership:verify' %}">
+              <i class="fa fa-mobile-screen"></i> Confirm code
+            </a>
+          {% endif %}
+          <a class="koco-btn koco-btn-outline koco-btn-sm" href="{{ SITE.whatsapp_url }}" target="_blank" rel="noopener">
+            <i class="fa-brands fa-whatsapp"></i> Chat with us
+          </a>
+        </div>
+      </div>
+    </nav>
+  </div>
+</nav>
