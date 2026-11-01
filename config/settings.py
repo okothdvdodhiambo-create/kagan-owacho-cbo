@@ -18,6 +18,17 @@ DEBUG = config("DEBUG", default=True, cast=bool)
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1,[::1]", cast=Csv())
 CSRF_TRUSTED_ORIGINS = [o for o in config("CSRF_TRUSTED_ORIGINS", default="", cast=Csv()) if o]
 
+# Render injects the public hostname of the service it just built. Honouring it here
+# means a deploy works without editing ALLOWED_HOSTS by hand, and a rename on Render
+# needs no code change.
+RENDER_EXTERNAL_HOSTNAME = config("RENDER_EXTERNAL_HOSTNAME", default="").strip()
+if RENDER_EXTERNAL_HOSTNAME:
+    if RENDER_EXTERNAL_HOSTNAME not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+    _render_origin = f"https://{RENDER_EXTERNAL_HOSTNAME}"
+    if _render_origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(_render_origin)
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -117,8 +128,18 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# Where uploaded photos and receipts live. Render free instances (and any instance
+# without a persistent disk) lose MEDIA_ROOT on the next restart, so production uses
+# "database": uploads become rows in the same PostgreSQL database that Render already
+# backs up. Keep "filesystem" for local work so media/ stays browsable.
+MEDIA_STORAGE = config("MEDIA_STORAGE", default="filesystem").strip().lower()
+
 STORAGES = {
-    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "default": {
+        "BACKEND": "apps.core.storage.DatabaseStorage"
+        if MEDIA_STORAGE == "database"
+        else "django.core.files.storage.FileSystemStorage"
+    },
     "staticfiles": {
         # Manifest hashing only in production so `runserver` works before collectstatic.
         "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"
@@ -159,10 +180,14 @@ ADMIN_INBOX_EMAIL = config("ADMIN_INBOX_EMAIL", default="admin1@kaganowacho.org"
 ORGANIZATION_NAME = config("ORGANIZATION_NAME", default="KAGAN OWACHO CBO")
 MEMBERSHIP_PREFIX = config("MEMBERSHIP_PREFIX", default="KOC")
 
-# Fixed administrator accounts bootstrapped by apps.core.signals -> init_admins.
+# Fixed administrator accounts bootstrapped by apps.core.signals -> bootstrap_site.
+# The two passwords below are development placeholders only: bootstrap_site refuses to
+# create an account that still uses one once DEBUG is off, so a live site cannot be
+# reachable through the credentials printed in the README.
+DEMO_ADMIN_PASSWORDS = ["AdminOne#2026", "AdminTwo#2026"]
 ADMIN_ACCOUNTS = [
-    (config("ADMIN1_EMAIL", default="admin1@kaganowacho.org"), config("ADMIN1_PASSWORD", default="AdminOne#2026")),
-    (config("ADMIN2_EMAIL", default="admin2@kaganowacho.org"), config("ADMIN2_PASSWORD", default="AdminTwo#2026")),
+    (config("ADMIN1_EMAIL", default="admin1@kaganowacho.org"), config("ADMIN1_PASSWORD", default=DEMO_ADMIN_PASSWORDS[0])),
+    (config("ADMIN2_EMAIL", default="admin2@kaganowacho.org"), config("ADMIN2_PASSWORD", default=DEMO_ADMIN_PASSWORDS[1])),
 ]
 
 SMS_PROVIDER = config("SMS_PROVIDER", default="console")
@@ -186,6 +211,10 @@ VERIFICATION_RESEND_COOLDOWN_SECONDS = config("VERIFICATION_RESEND_COOLDOWN_SECO
 
 # ------------------------------------------------------------- production ----
 if not DEBUG:
+    # Render terminates TLS and forwards plain HTTP to gunicorn. Without trusting that
+    # header, SECURE_SSL_REDIRECT sees every request as insecure and loops forever.
+    USE_X_FORWARDED_HOST = True
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", default=True, cast=bool)
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True

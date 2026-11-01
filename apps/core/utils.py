@@ -133,8 +133,35 @@ def file_uri_for_pdf(relative_path):
     """Absolute file:// URI (Windows-safe) for xhtml2pdf image embedding."""
     if not relative_path:
         return None
-    full = os.path.normpath(os.path.join(str(settings.MEDIA_ROOT), relative_path))
+    full = os.path.normpath(local_path_for_upload(relative_path))
     return "file:///" + full.replace("\\", "/").lstrip("/")
+
+
+def local_path_for_upload(relative_path):
+    """A local path xhtml2pdf can open: inside MEDIA_ROOT, or copied out of storage.
+
+    Database-backed uploads (MEDIA_STORAGE=database, as on Render) have no file on
+    disk, so they land in a temp folder. Rewritten on every call, so a logo the
+    committee replaced never prints stale.
+    """
+    import hashlib
+    import tempfile
+
+    from django.core.files.storage import default_storage
+
+    try:
+        return default_storage.path(relative_path)
+    except NotImplementedError:
+        pass
+
+    folder = os.path.join(tempfile.gettempdir(), "kagan-pdf-media")
+    os.makedirs(folder, exist_ok=True)
+    extension = os.path.splitext(relative_path)[1] or ".img"
+    token = hashlib.sha1(relative_path.encode("utf-8")).hexdigest()[:16]
+    target = os.path.join(folder, f"{token}{extension}")
+    with default_storage.open(relative_path, "rb") as source, open(target, "wb") as sink:
+        sink.write(source.read())
+    return target
 
 
 def iso_timestamp():

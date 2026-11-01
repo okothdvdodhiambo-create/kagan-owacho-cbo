@@ -1,20 +1,31 @@
 """Tests for shared site content: settings singleton, uploads, home/about pages, bootstrap."""
 
+import os
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
+from django.core.files.storage import default_storage
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
+from django.http import Http404
 from django.test import TestCase, RequestFactory, override_settings
 from django.urls import reverse
 
 from apps.contributions.models import Contribution
+from apps.core import views as core_views
 from apps.core.context_processors import navigation, site_settings
-from apps.core.models import AuditLog, NavItem, SiteSettings, SliderImage
+from apps.core.models import AuditLog, NavItem, SiteSettings, SliderImage, StoredFile
+from apps.core.storage import safe_content_type
 from apps.core.testing import MediaRootMixin, make_member, png_upload
-from apps.core.utils import kenyan_phone_to_254, validate_image_file
+from apps.core.utils import file_uri_for_pdf, kenyan_phone_to_254, local_path_for_upload, validate_image_file
 from apps.membership.models import DropdownOption, Member
 from config import settings as project_settings
+
+
+DATABASE_STORAGES = {
+    **project_settings.STORAGES,
+    "default": {"BACKEND": "apps.core.storage.DatabaseStorage"},
+}
 
 
 def request_for(path):
@@ -187,20 +198,45 @@ class AboutPageTests(TestCase):
 
 
 class BootstrapCommandTests(MediaRootMixin, TestCase):
+    # Real credentials, not the placeholders: bootstrap_site refuses the placeholders
+    # once DEBUG is off, which is exactly how tests run.
+    ADMIN_ACCOUNTS = [
+        ("chair@kaganowacho.org", "Chair#2026desk"),
+        ("treasurer@kaganowacho.org", "Treasurer#2026desk"),
+    ]
+
     def setUp(self):
         self.enable_temp_media()
+        override = override_settings(ADMIN_ACCOUNTS=self.ADMIN_ACCOUNTS)
+        override.enable()
+        self.addCleanup(override.disable)
 
     def test_creates_both_admins_nav_and_options(self):
         from apps.accounts.models import User
 
         call_command("bootstrap_site", "--skip-demo")
-        for email, _password in project_settings.ADMIN_ACCOUNTS:
+        for email, _password in self.ADMIN_ACCOUNTS:
             user = User.objects.get(email__iexact=email)
             self.assertTrue(user.is_admin and user.is_staff)
             self.assertTrue(user.has_usable_password())
         self.assertTrue(NavItem.objects.filter(url="/events/calendar/").exists())
         self.assertTrue(DropdownOption.objects.filter(field=DropdownOption.Field.GENDER).exists())
         self.assertEqual(SliderImage.objects.count(), 0)
+
+    def test_placeholder_password_is_refused_on_a_live_site(self):
+        from apps.accounts.models import User
+
+        with override_settings(ADMIN_ACCOUNTS=[("admin1@kaganowacho.org", project_settings.DEMO_ADMIN_PASSWORDS[0])]):
+            call_command("bootstrap_site", "--skip-demo")
+        self.assertFalse(User.objects.filter(email="admin1@kaganowacho.org").exists())
+
+    def test_blank_password_creates_nothing(self):
+        """An empty ADMIN2_PASSWORD must not produce an account anyone can enter."""
+        from apps.accounts.models import User
+
+        with override_settings(ADMIN_ACCOUNTS=[("blank@kaganowacho.org", "")]):
+            call_command("bootstrap_site", "--skip-demo")
+        self.assertFalse(User.objects.filter(email="blank@kaganowacho.org").exists())
 
     def test_is_idempotent(self):
         call_command("bootstrap_site", "--skip-demo")
@@ -219,3 +255,81 @@ class BootstrapCommandTests(MediaRootMixin, TestCase):
         call_command("bootstrap_site")
         self.assertEqual(SliderImage.objects.count(), 3)
         self.assertEqual(Event.objects.count(), 3)
+
+
+@override_settings(STORAGES=DATABASE_STORAGES)
+class DatabaseStorageTests(TestCase):
+    """Render's free tier has no persistent disk, so uploads must live in the database."""
+
+    def test_upload_is_stored_and_read_back(self):
+        upload = png_upload("avatar.png")
+        expected = upload.read()
+        upload.seek(0)
+
+        name = default_storage.save("avatars/me.png", upload)
+
+        row = StoredFile.objects.get(name=name)
+        self.assertEqual(name, "avatars/me.png")
+        self.assertEqual(bytes(row.data), expected)
+        self.assertEqual(row.size, len(expected))
+        self.assertEqual(row.content_type, "image/png")
+        with default_storage.open(name, "rb") as handle:
+            self.assertEqual(handle.read(), expected)
+
+    def test_reusing_a_name_gets_a_suffix_instead_of_overwriting(self):
+        first = default_storage.save("slider/slide.png", png_upload("slide.png"))
+        second = default_storage.save("slider/slide.png", png_upload("slide.png"))
+        self.assertEqual(first, "slider/slide.png")
+        self.assertTrue(second.startswith("slider/slide_"))
+        self.assertEqual(StoredFile.objects.count(), 2)
+
+    def test_exists_size_and_delete(self):
+        name = default_storage.save("receipts/mpesa.png", png_upload("mpesa.png"))
+        self.assertTrue(default_storage.exists(name))
+        self.assertEqual(default_storage.size(name), StoredFile.objects.get(name=name).size)
+        default_storage.delete(name)
+        self.assertFalse(default_storage.exists(name))
+        self.assertEqual(StoredFile.objects.count(), 0)
+
+    def test_url_points_at_the_media_path(self):
+        self.assertEqual(default_storage.url("branding/logo.png"), "/media/branding/logo.png")
+
+    def test_an_image_field_saves_straight_into_the_table(self):
+        slide = SliderImage.objects.create(caption="From the database")
+        slide.image.save("slide.png", png_upload("slide.png"), save=True)
+        self.assertTrue(StoredFile.objects.filter(name=slide.image.name).exists())
+        self.assertEqual(slide.image.url, f"/media/{slide.image.name}")
+
+    def test_only_accepted_types_are_served_inline(self):
+        self.assertEqual(safe_content_type("photo.jpg", "image/jpeg"), "image/jpeg")
+        self.assertEqual(safe_content_type("report.pdf", "application/pdf"), "application/pdf")
+        self.assertEqual(safe_content_type("page.html", "text/html"), "application/octet-stream")
+        self.assertEqual(safe_content_type("page.svg", "image/svg+xml"), "application/octet-stream")
+
+    def test_media_view_returns_the_stored_bytes(self):
+        name = default_storage.save("events/rally.png", png_upload("rally.png"))
+        expected = StoredFile.objects.get(name=name)
+
+        response = core_views.media(request_for(f"/media/{name}"), path=name)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "image/png")
+        self.assertEqual(response["X-Content-Type-Options"], "nosniff")
+        self.assertEqual(b"".join(response.streaming_content), bytes(expected.data))
+
+    def test_media_view_refuses_an_unknown_name(self):
+        with self.assertRaises(Http404):
+            core_views.media(request_for("/media/nope.png"), path="nope.png")
+
+    def test_pdf_logo_is_copied_out_of_the_database_onto_the_disk(self):
+        upload = png_upload("logo.png")
+        expected = upload.read()
+        upload.seek(0)
+        name = default_storage.save("branding/logo.png", upload)
+
+        local = local_path_for_upload(name)
+
+        self.assertTrue(os.path.exists(local))
+        with open(local, "rb") as handle:
+            self.assertEqual(handle.read(), expected)
+        self.assertTrue(file_uri_for_pdf(name).startswith("file:///"))

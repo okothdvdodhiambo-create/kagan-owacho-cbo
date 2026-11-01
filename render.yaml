@@ -1,0 +1,68 @@
+# Render Blueprint for the KAGAN OWACHO CBO system (Django + PostgreSQL).
+#
+# One action in the Render dashboard - New > Blueprint on this repository - creates
+# both resources below and wires the database into the app through DATABASE_URL.
+#
+# No secret is stored in this file:
+#   * SECRET_KEY is generated once by Render and then reused on every deploy.
+#   * DATABASE_URL is copied from the database Render creates.
+#   * ADMIN1_*/ADMIN2_* are typed into the dashboard when the Blueprint is applied.
+#
+# The build step runs `migrate`, which fires apps/core/signals.py -> bootstrap_site,
+# so both administrator accounts exist before the app serves its first request.
+# No paid Render Shell is needed.
+
+services:
+  - type: web
+    name: kagan-owacho-cbo
+    envType: python
+    plan: free
+    branch: main
+    buildCommand: >
+      pip install -r requirements.txt &&
+      python manage.py collectstatic --noinput &&
+      python manage.py migrate --noinput
+    # One worker, four threads: a free Render instance has 512 MB RAM and the PDF
+    # engine holds a lot of it. Raise --workers only on a paid instance type.
+    startCommand: >
+      gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.11"
+      - key: DEBUG
+        value: "False"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: kagan-owacho-db
+          property: connectionString
+      # Free Render instances have no persistent disk, so uploads live in PostgreSQL.
+      - key: MEDIA_STORAGE
+        value: database
+      # Type these four in the dashboard when Render asks. Leave ADMIN*_PASSWORD out of
+      # this file on purpose; a live account that still uses the placeholder password in
+      # config/settings.py is refused by bootstrap_site, so it cannot be guessed.
+      - key: ADMIN1_EMAIL
+        sync: false
+      - key: ADMIN1_PASSWORD
+        sync: false
+      - key: ADMIN2_EMAIL
+        sync: false
+      - key: ADMIN2_PASSWORD
+        sync: false
+      # Optional integrations. Add them here, or later in the dashboard's Environment
+      # tab, once you hold the keys - each one already has a working dev fallback:
+      #   EMAIL_HOST, EMAIL_PORT, EMAIL_USE_TLS, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD,
+      #   DEFAULT_FROM_EMAIL  -> real email instead of the console
+      #   SMS_PROVIDER=africastalking, AFRICASTALKING_USERNAME, AFRICASTALKING_API_KEY,
+      #   AFRICASTALKING_SENDER_ID -> real SMS
+      #   MPESA_ENV, MPESA_CONSUMER_KEY, MPESA_CONSUMER_SECRET, MPESA_SHORTCODE,
+      #   MPESA_PASSKEY, MPESA_CALLBACK_URL -> live M-Pesa (callback must be
+      #   https://<your-host>/contributions/mpesa/callback/)
+
+databases:
+  - name: kagan-owacho-db
+    plan: free
+    databaseName: kaganowacho

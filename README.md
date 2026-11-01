@@ -110,6 +110,11 @@ As delivered, `.env.example` (and therefore your new `.env`) contains:
 | Address 1 | `admin1@kaganowacho.org` / `AdminOne#2026` |
 | Address 2 | `admin2@kaganowacho.org` / `AdminTwo#2026` |
 
+Those two passwords are development placeholders. They work while `DEBUG=True`. Once `DEBUG=False`,
+`bootstrap_site` refuses to create an account that still uses one (and refuses an empty password) and
+prints the reason in the deploy log — so a public site can never be reachable through a password that
+is printed in this file.
+
 Go to **/accounts/login/** (the *Log in* button at the top right), enter one of those pairs, and you
 land on the committee dashboard at **/admin-panel/**.
 
@@ -245,10 +250,10 @@ The suite covers the flows the project brief asked for and more:
 | `apps.membership` | Registration validation (Kenyan phone rules, dropdown-only choices), pending state, code issue/hash/expiry/attempts/resend, numbering, who may enter the member area |
 | `apps.contributions` | Manual M-Pesa, bank slip, transcript totals, confirm/reject + e-mail, STK fallback when Daraja is off, Safaricom callback (success, failure, unknown, bad JSON, wrong verb), PDF statement content |
 | `apps.admin_panel` | Permission matrix (anonymous/member/staff/admin/superuser), member search & filters, CSV/Excel export, suspend/delete + audit, payment decisions, incident replies, settings forms, navigation, dropdowns, announcements, event create/delete |
-| `apps.core` | Settings singleton, phone normalisation, image validation, audit IP handling, home/about rendering, slider and navigation, `bootstrap_site` idempotency |
+| `apps.core` | Settings singleton, phone normalisation, image validation, audit IP handling, home/about rendering, slider and navigation, `bootstrap_site` (admins from `.env`, placeholder-password refusal, idempotency), database-backed uploads and the `/media/` view |
 | `apps.events` | The calendar feed's exact shape and time-zone handling, published vs draft, category filter, report pages |
 
-Latest run: **115 tests, all passing** (`python manage.py test` prints `OK`).
+Latest run: **126 tests, all passing** (`python manage.py test` prints `OK`).
 
 Tests never touch your real data — they build a separate `test_db.sqlite3` and delete it afterwards.
 
@@ -260,15 +265,20 @@ Honest notes for whoever marks or deploys this:
 
 * **Verified by machine** — every automated test above, `manage.py check --deploy`,
   `collectstatic` (129 files, hashed manifest), the SQLite and PostgreSQL configuration paths,
-  PDF generation, image resizing, CSV/Excel exports.
+  PDF generation, image resizing, CSV/Excel exports. Also a Render-shaped run of the whole site
+  (`DEBUG=False`, `RENDER_EXTERNAL_HOSTNAME` set, uploads held in the database): both administrators
+  bootstrapped from environment variables, the public pages, a photo saved by the slider form and
+  served back through `/media/`, a committee login reaching the dashboard, and a statement PDF whose
+  logo had to be copied out of the database first.
 * **Verified by hand in a real browser** — home page with the animated header, slider (arrows, dots,
   auto-advance), mobile menu, member registration and login, member dashboard, the PDF statement as
   rendered by a PDF viewer, the calendar showing events on the correct EAT dates, the admin
   dashboard, and the styled 403 page for a member who opens an admin URL.
 * **Not verified** — a live M-Pesa STK push (no Safaricom keys available), a real Africa's Talking
-  SMS, a real SMTP delivery, and a live PostgreSQL server. The code paths exist and are exercised
-  with development fallbacks and mocked responses, but the handshake with those three services can
-  only be proven with real credentials.
+  SMS, a real SMTP delivery, a live PostgreSQL server, and a real Render account: `render.yaml`
+  parses and the app runs in the exact configuration it describes, but only you can press
+  *New → Blueprint*. The code paths exist and are exercised with development fallbacks and mocked
+  responses; the handshake with those services can only be proven with real credentials.
 * The calendar, Bootstrap and Font Awesome come from a CDN. On a machine with no internet the pages
   still work, but icons and the calendar grid look plain/empty. Vendoring those files locally is a
   small, self-contained change if you need a fully offline site.
@@ -301,6 +311,12 @@ the M-Pesa prompt falls back to the manual code form.
 See **[DEPLOYMENT.md](DEPLOYMENT.md)** for PythonAnywhere, Render, Docker and a VPS, including the
 exact M-Pesa callback address and the checklist to run once the site is public.
 
+For Render the repository carries a **`render.yaml` Blueprint**: one *New → Blueprint* action in the
+dashboard creates the web service and its PostgreSQL database, generates the `SECRET_KEY`, and runs
+`migrate` (which creates the two administrator accounts from the environment variables). Uploaded
+photos go into the database rather than a folder, because Render's free instances have no persistent
+disk — set `MEDIA_STORAGE=filesystem` if you mount a paid disk instead.
+
 ---
 
 ## 17. Where everything lives
@@ -315,13 +331,16 @@ apps/events/              events, calendar + JSON feed, reports and photos
 apps/incidents/           member problems and committee replies
 apps/communications/      announcements, member messages, e-mail + SMS services
 apps/admin_panel/         the committee dashboard, settings, exports, audit views
-apps/core/                site settings, navigation, slider, audit log, helpers
+apps/core/                site settings, navigation, slider, audit log, helpers,
+                          and storage.py (uploads kept inside the database)
 templates/                every HTML page (including 403/404/500)
 static/                   the site's own CSS and JS
-media/                    uploaded files (logo, photos, slips) - created when needed
+media/                    uploaded files when MEDIA_STORAGE=filesystem
+render.yaml               one-click Render setup: the web service plus PostgreSQL
 db.sqlite3                the database - delete it to start empty
 .env                      your secrets - never share or commit this file
 ```
 
-**Backup rule:** the whole site is the `db.sqlite3` file plus the `media/` folder. Copy both, and
-you have copied everything.
+**Backup rule:** on a laptop, the whole site is `db.sqlite3` plus the `media/` folder. On Render
+(`MEDIA_STORAGE=database`) the photos live inside the database, so **one database dump is the entire
+site** - that is why the uploads were put there.

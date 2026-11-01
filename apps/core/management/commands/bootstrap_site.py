@@ -20,7 +20,18 @@ def make_admins():
     created_any = []
     for index, (email, password) in enumerate(settings.ADMIN_ACCOUNTS, start=1):
         email = (email or "").strip().lower()
+        password = password or ""
         if not email:
+            print(f"  admin {index}: ADMIN{index}_EMAIL is empty, nothing to create")
+            continue
+        if not password.strip():
+            print(f"  admin {index}: ADMIN{index}_PASSWORD is empty, {email} was NOT created")
+            continue
+        if not settings.DEBUG and password in settings.DEMO_ADMIN_PASSWORDS:
+            print(
+                f"  admin {index}: {email} still uses the placeholder ADMIN{index}_PASSWORD. "
+                "Set a strong password in Render and redeploy - no account was created."
+            )
             continue
         user, created = User.objects.get_or_create(
             email=email,

@@ -1,8 +1,10 @@
-"""Public pages: home and about."""
+"""Public pages: home, about, and uploads held in the database."""
 
 from django.db.models import Sum
-from django.shortcuts import render
+from django.http import FileResponse
+from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
+from django.utils.http import http_date
 
 from .models import SiteSettings, SliderImage
 
@@ -33,3 +35,23 @@ def about(request):
         "core/about.html",
         {"site": site, "page_title": "About us", "page_description": site.about_mission},
     )
+
+
+def media(request, path):
+    """Serve an upload stored in the database (see apps.core.storage.DatabaseStorage)."""
+
+    from .models import StoredFile
+    from .storage import INLINE_CONTENT_TYPES
+
+    row = get_object_or_404(StoredFile, name=path)
+    safe_name = "".join(c for c in row.name.rsplit("/", 1)[-1] if c.isalnum() or c in "._-") or "upload"
+    disposition = "inline" if row.content_type in INLINE_CONTENT_TYPES else "attachment"
+
+    response = FileResponse(
+        row.as_file(), content_type=row.content_type, as_attachment=disposition == "attachment", filename=safe_name
+    )
+    response["Content-Length"] = str(row.size)
+    response["X-Content-Type-Options"] = "nosniff"
+    response["Last-Modified"] = http_date(row.uploaded_at.timestamp())
+    response["Cache-Control"] = "public, max-age=86400"
+    return response

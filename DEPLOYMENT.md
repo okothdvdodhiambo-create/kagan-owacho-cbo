@@ -79,22 +79,71 @@ The free tier only allows your own domain to be visited; that is fine here.
 
 ## 2. Render (free tier, auto-deploys from git)
 
-* New **Web Service**, connect the repository, Build command:
+`render.yaml` in this repository is a Render **Blueprint**: one dashboard action creates the web
+service *and* its PostgreSQL database and wires `DATABASE_URL` between them. You do not type the
+build command, the start command, the secret key or the database URL by hand.
+
+```
+Render dashboard → New → Blueprint → (authorise GitHub) → pick okothdvdodhiambo-create/kagan-owacho-cbo
+→ Advanced → fill the four ADMIN* values → Apply
+```
+
+| Variable in the Blueprint | Where it comes from |
+| --- | --- |
+| `DEBUG` | fixed to `False` in `render.yaml` |
+| `SECRET_KEY` | `generateValue: true` — Render makes one and reuses it on every deploy |
+| `DATABASE_URL` | `fromDatabase` — Render fills it from the database it creates |
+| `PYTHON_VERSION` | pinned to `3.12.11` so the Postgres and Pillow wheels install cleanly |
+| `MEDIA_STORAGE` | `database` — see "uploaded files" below |
+| `ADMIN1_EMAIL`, `ADMIN1_PASSWORD`, `ADMIN2_EMAIL`, `ADMIN2_PASSWORD` | **you type these**, `sync: false`, never stored in git |
+| `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS` | not needed: `config/settings.py` adds `RENDER_EXTERNAL_HOSTNAME` automatically |
+
+The build runs `pip install -r requirements.txt`, `collectstatic`, then `migrate`. That `migrate`
+fires `apps/core/signals.py` → `bootstrap_site`, which creates both administrator accounts from the
+environment variables, the navigation, the dropdown lists and the sample content — so no paid
+Render Shell is ever needed. `bootstrap_site` refuses an account whose password is still the
+placeholder from `config/settings.py`, and refuses an empty password, so a live site cannot be
+reachable through the credentials printed in the README.
+
+**Uploaded files.** Render gives free instances **no persistent disk**, so anything written to
+`MEDIA_ROOT` disappears at the next restart or deploy. This project therefore stores uploads —
+profile photos, slider photos, the logo, receipt images, incident attachments — as rows in the same
+PostgreSQL database as every other record (`MEDIA_STORAGE=database`, `apps/core/storage.py`, served
+back by the `/media/...` view). One backup then carries the members *and* their photos. The trade
+off: the free database holds 1 GB, and each photo is resized to at most 1400 px / about 200-400 KB,
+so plan for a few thousand uploads before you need more room.
+
+If you later move to a paid Render instance you can switch to a real disk instead:
+
+1. Add to `render.yaml`: `disks: [{name: media, mountPath: /opt/render/project/src/media, sizeGB: 1}]`
+   (paid instance types only — a free one rejects the key).
+2. Set `MEDIA_STORAGE` to `filesystem` (or delete it) and restart.
+3. Copy the existing rows out first: `python manage.py dumpdata core.StoredFile > uploads.json`,
+   then `loaddata` them into the disk with `MEDIA_STORAGE=filesystem`, or re-upload the logo and
+   slider photos from the dashboard.
+
+Cloudinary (or any S3-style bucket) is the third option: it needs an account, an API secret in
+Render, and a storage backend of your own, so it is only worth it when uploads outgrow the database.
+
+**What the free tier costs you in practice**
+
+* A free web service **spins down after 15 minutes without traffic**; the next request waits roughly
+  30-90 seconds while gunicorn starts. Every later request is normal speed.
+* A free Render PostgreSQL **expires 30 days after it is created** and its data is deleted. Before
+  day 30 either upgrade the database (paid, from its **Details** tab, keeping the same host) or take
+  a dump and restore it into a fresh one:
 
   ```bash
-  pip install -r requirements.txt && python manage.py migrate && python manage.py collectstatic --noinput
+  python manage.py dumpdata --natural-foreign --natural-primary -e contenttypes -e auth.permission > backup.json
+  python manage.py loaddata backup.json
   ```
 
-* Start command (the `Procfile` already contains this, so Render may fill it in):
+* One database, 512 MB RAM, 0.1 CPU: fine for a ward-sized membership, not for a county-wide one.
 
-  ```bash
-  gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120
-  ```
-
-* Environment variables: everything from `.env` (Render reads real environment variables;
-  python-decouple checks them before the file).
-* Add a **Disk** mounted at `/opt/render/project/src/media` so uploaded photos survive a re-deploy.
-* Point your domain at Render, then update `ALLOWED_HOSTS` and `CSRF_TRUSTED_ORIGINS` and restart.
+**Your own domain.** Add it under the service's **Info** tab → *Custom Domains*, then set
+`ALLOWED_HOSTS=kaganowacho.org,www.kaganowacho.org` and
+`CSRF_TRUSTED_ORIGINS=https://kaganowacho.org,https://www.kaganowacho.org` in the Environment tab and
+restart. The `*.onrender.com` address keeps working without any of that.
 
 ---
 
@@ -219,7 +268,7 @@ DATABASE_URL=postgres://kagan:password@localhost:5432/kagan_cbo
 ```
 
 ```bash
-pip install "psycopg[binary]"
+pip install "psycopg[binary]"   # requirements.txt installs it on Linux only; on Windows run this
 python manage.py migrate
 ```
 

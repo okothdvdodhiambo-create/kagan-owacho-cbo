@@ -1,6 +1,7 @@
 """Site-wide, admin-editable content: branding, page text, slider, nav, footer links."""
 
 from django.conf import settings
+from django.core.files.base import ContentFile, File
 from django.db import models
 
 from .utils import validate_image_file
@@ -204,3 +205,29 @@ class AuditLog(models.Model):
             details=details,
             ip_address=client_ip(request),
         )
+
+
+class StoredFile(models.Model):
+    """An uploaded file kept in the database instead of on the local disk.
+
+    Used by apps.core.storage.DatabaseStorage when MEDIA_STORAGE=database, which is
+    how Render keeps profile photos, slider photos, logos and receipt images between
+    restarts and deploys when the instance has no persistent disk.
+    """
+
+    name = models.CharField(max_length=255, unique=True)
+    data = models.BinaryField()
+    content_type = models.CharField(max_length=100, default="application/octet-stream")
+    size = models.PositiveIntegerField(default=0)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name = "Stored upload"
+        verbose_name_plural = "Stored uploads"
+
+    def __str__(self):
+        return self.name
+
+    def as_file(self):
+        return File(ContentFile(bytes(self.data), name=self.name), name=self.name)
