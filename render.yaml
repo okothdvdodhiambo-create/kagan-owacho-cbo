@@ -15,7 +15,7 @@
 services:
   - type: web
     name: kagan-owacho-cbo
-    envType: python
+    runtime: python
     plan: free
     branch: main
     buildCommand: >
