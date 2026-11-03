@@ -32,7 +32,9 @@
             {% elif user.membership %}
               <li><a class="dropdown-item" href="{% url 'membership:pending' %}"><i class="fa fa-hourglass-half me-2 text-gold"></i>Finish verification</a></li>
             {% else %}
-              <li><a class="dropdown-item" href="{% url 'membership:register' %}"><i class="fa fa-id-card me-2 text-gold"></i>Register as a member</a></li>
+              {% if not user.is_administrator %}
+                <li><a class="dropdown-item" href="{% url 'membership:complete' %}"><i class="fa fa-id-card me-2 text-gold"></i>Complete your membership</a></li>
+              {% endif %}
             {% endif %}
             <li><a class="dropdown-item" href="{% url 'accounts:profile' %}"><i class="fa fa-user-pen me-2 text-gold"></i>Edit profile</a></li>
             <li><a class="dropdown-item" href="{% url 'accounts:password_change' %}"><i class="fa fa-key me-2 text-gold"></i>Change password</a></li>
@@ -52,7 +54,7 @@
       {% else %}
         <div class="koco-guest-actions">
           <a class="koco-btn koco-btn-ghost koco-btn-sm" href="{% url 'accounts:login' %}"><i class="fa fa-right-to-bracket"></i> Log in</a>
-          <a class="koco-btn koco-btn-gold koco-btn-sm" href="{% url 'accounts:signup' %}"><i class="fa fa-user-plus"></i> Create account</a>
+          <a class="koco-btn koco-btn-gold koco-btn-sm" href="{% url 'membership:register' %}"><i class="fa fa-id-card"></i> Register as a Member</a>
         </div>
       {% endif %}
     </div>

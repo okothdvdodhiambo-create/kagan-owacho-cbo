@@ -6,7 +6,7 @@
   <div class="col-12 col-md-8 col-lg-5">
     <div class="koco-card koco-form">
       <h1 class="page-title h3 mb-1">Log in</h1>
-      <p class="koco-lead">Use the email address and password you registered with.</p>
+      <p class="koco-lead">Members log in with the email address and password they registered with.</p>
 
       <form method="post" novalidate>
         {% csrf_token %}
@@ -17,14 +17,15 @@
         </button>
       </form>
 
-      <div class="d-flex justify-content-between align-items-center mt-3 small">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3 small">
         <a href="{% url 'accounts:password_reset' %}">Forgot password?</a>
-        <a href="{% url 'accounts:signup' %}">Create an account</a>
+        <a href="{% url 'accounts:resend_code' %}">Resend verification code</a>
       </div>
     </div>
     <p class="text-center small-muted mt-3">
       Not a member yet?
-      <a href="{% url 'membership:register' %}">Register as a member of {{ SITE.organization_name }}</a>.
+      <a href="{% url 'membership:register' %}">Register as a Member of {{ SITE.organization_name }}</a>.
+      An account and a membership are created together.
     </p>
   </div>
 </div>

@@ -41,16 +41,32 @@ def seed_dropdown_options():
 
 
 def register_payload(email="jane@example.com", phone="0712 345 678", **overrides):
+    """One POST creates the account and the membership, so it carries both halves."""
     data = {
-        "full_name": "Jane Owacho Adega",
-        "phone": phone,
+        "name": "Jane Owacho Adega",
         "email": email,
+        "password1": "Member#2026",
+        "password2": "Member#2026",
+        "phone": phone,
         "gender": "Female",
         "role": "Youth Member",
         "location": "Kagan Ward",
         "sub_location": "Rangwe",
         "occupation": "Farmer",
-        "channel": "both",
+    }
+    data.update(overrides)
+    return data
+
+
+def member_details_payload(phone="0712 345 678", **overrides):
+    """The membership half only - used when an existing account completes its record."""
+    data = {
+        "phone": phone,
+        "gender": "Female",
+        "role": "Youth Member",
+        "location": "Kagan Ward",
+        "sub_location": "Rangwe",
+        "occupation": "Farmer",
     }
     data.update(overrides)
     return data

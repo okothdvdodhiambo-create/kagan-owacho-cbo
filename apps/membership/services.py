@@ -4,6 +4,7 @@ import logging
 
 from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.urls import reverse
 from django.utils.encoding import force_bytes
@@ -14,32 +15,101 @@ from .models import Member, VerificationCode
 logger = logging.getLogger(__name__)
 
 
-@transaction.atomic
-def save_registration(form, request=None, user=None):
-    """Create or refresh a pending membership and issue a fresh verification code."""
-    member = form.save(commit=False)
-    existing = Member.objects.filter(email=member.email).exclude(verified=True).first()
-    if existing:
-        # Same person registering again - keep the row (and its code history) instead of duplicating.
-        member.pk = existing.pk
-        member.membership_no = existing.membership_no
-    if user is not None and getattr(user, "is_authenticated", False):
-        member.user = user
-    member.verification_channel = form.cleaned_data.get("channel", "both")
+def save_registration(form):
+    """One submitted form creates the account (inactive) and its membership (pending).
+
+    Re-submitting with corrections refreshes the same pair, so a person who mistyped
+    an email address is never locked out by their own unfinished registration.
+    """
+    from apps.accounts.models import User
+
+    details = form.member_details()
+    email = form.cleaned_data["email"]
+    with transaction.atomic():
+        user = form.pending_account()
+        if user is None:
+            user = User.objects.create_user(
+                email=email,
+                name=details["full_name"],
+                password=form.cleaned_data["password1"],
+                phone=details["phone"],
+                photo=form.cleaned_data.get("photo"),
+                is_active=False,
+            )
+        else:
+            user.name = details["full_name"]
+            user.phone = details["phone"]
+            user.set_password(form.cleaned_data["password1"])
+            if form.cleaned_data.get("photo"):
+                user.photo = form.cleaned_data["photo"]
+            user.is_active = False
+            user.save()
+
+        member = Member.objects.filter(user=user).order_by("-created_at").first()
+        if member is None:
+            member = Member.objects.filter(email__iexact=email, verified=False).order_by("-created_at").first()
+        if member is None:
+            member = Member(user=user)
+        _apply_details(member, user, details, email)
+    return user, member
+
+
+def save_membership_for_account(form, user, member=None):
+    """Add or refresh the membership row that belongs to an existing account."""
+    if member is None:
+        member = Member.objects.filter(user=user).order_by("-created_at").first()
+    if member is None:
+        member = Member(user=user)
+    if member.verified:
+        raise ValidationError("This account is already a verified member.")
+    with transaction.atomic():
+        _apply_details(member, user, form.member_details(), user.email)
+    return member
+
+
+def _apply_details(member, user, details, email):
+    """Write the member half of a form onto a pending membership row."""
+    if member.verified:
+        raise ValidationError("This membership is already verified. Log in instead.")
+    member.user = user
+    member.full_name = details["full_name"] or user.name
+    member.email = email
+    member.phone = details["phone"]
+    member.gender = details["gender"]
+    member.role = details["role"]
+    member.location = details["location"]
+    member.sub_location = details["sub_location"]
+    member.occupation = details["occupation"]
+    member.verification_channel = _channel()
     member.status = Member.Status.PENDING
     member.verified = False
     member.save()
     return member
 
 
+def _channel():
+    from apps.communications.services import default_verification_channel
+
+    return default_verification_channel()
+
+
 def issue_code(member, channel=None):
     from apps.communications.services import send_verification_code
 
-    channel = channel or member.verification_channel or "both"
+    channel = channel or member.verification_channel or "email"
     code, plaintext = VerificationCode.issue(member, channel=channel)
     report = send_verification_code(member, plaintext, channel=channel)
     logger.info("Verification code for %s issued via %s", member.email, channel)
+    if settings.DEBUG:
+        # Never depend on the mail server to know what the code was.
+        banner = "=" * 62
+        print(f"\n{banner}\n[VERIFICATION CODE -> {member.email}]\nCode: {plaintext}\n{banner}\n")
     return code, plaintext, report
+
+
+def email_failed(report):
+    """True when the code could not be handed to the mail server at all."""
+    return not (report or {}).get("email")
 
 
 def current_code(member):
@@ -98,7 +168,7 @@ def ensure_login_account(member, request=None):
 
 
 def confirm_membership(member, request=None):
-    """Verify, assign KOC number, welcome the member by email + SMS."""
+    """Verify, assign the KOC number, switch the account on, welcome the member."""
     from apps.communications.services import (
         send_membership_confirmation,
         send_welcome_account_link,
@@ -106,6 +176,9 @@ def confirm_membership(member, request=None):
 
     member.confirm_membership()
     user, reset_url = ensure_login_account(member, request)
+    if user is not None and not user.is_active:
+        user.is_active = True
+        user.save(update_fields=["is_active"])
     if reset_url:
         send_welcome_account_link(member, reset_url)
     delivery = send_membership_confirmation(member)

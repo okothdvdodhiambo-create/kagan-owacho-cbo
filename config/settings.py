@@ -176,6 +176,10 @@ EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="Kagan Owacho CBO <no-reply@kaganowacho.org>")
 ADMIN_INBOX_EMAIL = config("ADMIN_INBOX_EMAIL", default="admin1@kaganowacho.org")
 
+# A registration page must not sit waiting on a slow or unreachable mail server.
+# Django's SMTP backend reads this directly and gives up after the timeout.
+EMAIL_TIMEOUT = config("EMAIL_TIMEOUT", default=10, cast=int)
+
 # ------------------------------------------------------ project constants ----
 ORGANIZATION_NAME = config("ORGANIZATION_NAME", default="KAGAN OWACHO CBO")
 MEMBERSHIP_PREFIX = config("MEMBERSHIP_PREFIX", default="KOC")

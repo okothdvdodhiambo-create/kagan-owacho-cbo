@@ -53,7 +53,7 @@ class SiteSettings(SingletonModel):
             "students, sponsor events, and keep every shilling accountable to our members."
         ),
     )
-    home_call_to_action = models.CharField(max_length=60, default="Become a member")
+    home_call_to_action = models.CharField(max_length=60, default="Register as a Member")
     home_statistics_note = models.CharField(max_length=160, blank=True, default="Students supported, events sponsored, members served.")
 
     # About page

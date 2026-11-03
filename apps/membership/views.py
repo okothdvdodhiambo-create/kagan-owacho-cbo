@@ -1,8 +1,9 @@
-"""Public registration flow plus the member-facing dashboard pages."""
+"""One-step registration, code verification, and the member-facing pages."""
 
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 
 from apps.accounts.decorators import member_required
@@ -12,61 +13,72 @@ from apps.core.models import AuditLog, SiteSettings
 from apps.incidents.models import Incident
 
 from . import services
-from .forms import MemberRegisterForm, VerificationCodeForm
+from .forms import CompleteMembershipForm, RegisterForm, VerificationCodeForm
 from .models import Member
 
 
 def register(request):
-    """Step 1: the 'Register as a Member' form."""
-    user = request.user
-    membership = user.membership if user.is_authenticated else None
-    if membership is not None and membership.verified:
-        messages.info(request, "You are already a verified member.")
-        return redirect("membership:dashboard")
+    """Create the account and the membership from a single form."""
+    if request.user.is_authenticated:
+        if request.user.is_administrator:
+            return redirect("admin_panel:dashboard")
+        return redirect("membership:complete")
 
-    form = MemberRegisterForm(request.POST or None, instance=Member(user=user if user.is_authenticated else None))
+    form = RegisterForm(request.POST or None, request.FILES or None)
     if request.method == "POST" and form.is_valid():
-        member = services.save_registration(form, request=request, user=user)
+        user, member = services.save_registration(form)
         _code, plaintext, report = services.issue_code(member)
+        AuditLog.record(user, "account.created", target=user.email, request=request)
+        AuditLog.record(user, "membership.registered", target=member.email, request=request)
         request.session["verification_member_pk"] = member.pk
-        AuditLog.record(user if user.is_authenticated else None, "membership.registered", target=member.email, request=request)
-        messages.success(request, "Almost done! We sent a 6-digit code to verify you. " + _delivery_note(report))
-        if settings.DEBUG:
-            messages.warning(request, f"Development mode - the code is {plaintext}.")
+        _announce_code(request, report, plaintext)
         return redirect("membership:verify")
 
     return render(
         request,
         "membership/register.html",
-        {
-            "form": form,
-            "page_title": "Register as a Member",
-            "logged_in_membership": membership,
-        },
+        {"form": form, "page_title": "Register as a Member"},
     )
 
 
-def _delivery_note(report):
-    sms = report.get("sms")
-    email = report.get("email")
-    parts = []
-    if sms and sms.sent:
-        parts.append("by SMS")
-    if email:
-        parts.append("by email")
-    if not parts:
-        return "If it does not arrive within a few minutes, use 'Send the code again'."
-    return "It was sent " + " and ".join(parts) + "."
+@login_required
+def complete(request):
+    """Member details for an account that joined before the two steps merged."""
+    user = request.user
+    if user.is_administrator:
+        return redirect("admin_panel:dashboard")
+
+    member = Member.objects.filter(user=user).order_by("-created_at").first()
+    if member is not None and member.verified:
+        messages.info(request, "Your membership is already confirmed.")
+        return redirect("membership:dashboard")
+
+    form = CompleteMembershipForm(
+        request.POST or None, member=member, initial={} if (member or request.POST) else {"phone": user.phone}
+    )
+    if request.method == "POST" and form.is_valid():
+        member = services.save_membership_for_account(form, user, member)
+        _code, plaintext, report = services.issue_code(member)
+        AuditLog.record(user, "membership.registered", target=member.email, request=request)
+        request.session["verification_member_pk"] = member.pk
+        _announce_code(request, report, plaintext)
+        return redirect("membership:verify")
+
+    return render(
+        request,
+        "membership/complete.html",
+        {"form": form, "member": member, "page_title": "Complete your membership"},
+    )
 
 
 def verify(request):
-    """Step 2: the member types the 6-digit code."""
+    """The member types the 6-digit code that was emailed to them."""
     member = _member_in_play(request)
     if member is None:
-        messages.warning(request, "Start by filling the membership form.")
+        messages.warning(request, "Start by filling the registration form.")
         return redirect("membership:register")
     if member.verified:
-        return redirect("membership:dashboard")
+        return redirect("membership:pending")
 
     if request.method == "POST" and "resend" in request.POST:
         allowed, seconds = member.can_resend_code
@@ -82,9 +94,9 @@ def verify(request):
     form = VerificationCodeForm(request.POST or None)
     code = services.current_code(member)
     if request.method == "POST" and form.is_valid():
-        ok, message = services.check_code(member, form.cleaned_data["code"])
+        ok, note = services.check_code(member, form.cleaned_data["code"])
         if not ok:
-            messages.error(request, message)
+            messages.error(request, note)
             return render(
                 request,
                 "membership/verify.html",
@@ -92,13 +104,14 @@ def verify(request):
             )
         result = services.confirm_membership(member, request)
         AuditLog.record(result["user"], "membership.verified", target=member.membership_no, request=request)
-        _auto_login(request, result)
+        _auto_login(request, result["user"])
         messages.success(
             request,
-            f"Welcome to Kagan Owacho CBO, {member.full_name}! Your membership number is {member.membership_no}.",
+            f"Welcome to the CBO, {member.full_name}! Your membership number is {member.membership_no} "
+            "and your account is now active.",
         )
         if result["created_account"]:
-            messages.info(request, "Please set your password from the dashboard (check your email too).")
+            messages.info(request, "We emailed you a link to set your password.")
         request.session.pop("verification_member_pk", None)
         return redirect("membership:dashboard")
 
@@ -113,6 +126,31 @@ def verify(request):
             "cooldown_seconds": max(0, settings.VERIFICATION_RESEND_COOLDOWN_SECONDS - _seconds_since(member)),
         },
     )
+
+
+def _announce_code(request, report, plaintext):
+    """Say where the code went, and say so plainly if the mail server refused it."""
+    if services.email_failed(report):
+        messages.error(
+            request,
+            "We saved your details, but the verification email could not be sent right now. "
+            "Your account stays inactive until it arrives - use 'Send the code again', or contact "
+            "the treasurer if the problem continues.",
+        )
+        if settings.DEBUG:
+            messages.warning(request, f"Development mode - the code is {plaintext}.")
+        return
+    messages.success(request, "Almost done! " + _delivery_note(report))
+    if settings.DEBUG:
+        messages.warning(request, f"Development mode - the code is {plaintext}.")
+
+
+def _delivery_note(report):
+    if (report or {}).get("email") and (report or {}).get("sms"):
+        return "We sent a 6-digit code to your email and by SMS. It works for 10 minutes."
+    if (report or {}).get("email"):
+        return "We sent a 6-digit code to your email. It works for 10 minutes."
+    return "Check your email for the 6-digit code. If it does not arrive, use 'Send the code again'."
 
 
 def _seconds_since(member):
@@ -134,19 +172,22 @@ def _member_in_play(request):
     return None
 
 
-def _auto_login(request, result):
-    """Members who came from the public form get signed in; admins stay where they are."""
-    user = result["user"]
-    if request.user.is_authenticated or user is None:
+def _auto_login(request, user):
+    """The new member is signed in straight after the code; admins are left alone."""
+    if request.user.is_authenticated or user is None or not user.is_active:
         return
     login(request, user, backend="django.contrib.auth.backends.ModelBackend")
 
 
+@login_required
 def pending(request):
-    """Shown when a logged-in account has not finished membership verification."""
-    membership = Member.objects.filter(user=request.user).order_by("-created_at").first() if request.user.is_authenticated else None
+    """Landing page for anyone whose membership still needs confirming."""
+    user = request.user
+    if user.is_administrator:
+        return redirect("admin_panel:dashboard")
+    membership = Member.objects.filter(user=user).order_by("-created_at").first()
     if membership is None:
-        return redirect("membership:register")
+        return redirect("membership:complete")
     if membership.verified:
         return redirect("membership:dashboard")
     request.session["verification_member_pk"] = membership.pk

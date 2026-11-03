@@ -5,9 +5,10 @@ from . import views
 app_name = "membership"
 
 urlpatterns = [
-    # Public membership sign-up flow
+    # Public registration flow: one form, then the emailed code
     path("register/", views.register, name="register"),
     path("verify/", views.verify, name="verify"),
+    path("complete/", views.complete, name="complete"),
     path("verification-pending/", views.pending, name="pending"),
     # Member area
     path("dashboard/", views.dashboard, name="dashboard"),

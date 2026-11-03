@@ -1,92 +1,25 @@
-"""Account tests: signing up, logging in, throttling, profile photos and password reset."""
+"""Account tests: logging in, throttling, verification resend, profile photos and password reset."""
+
+from datetime import timedelta
 
 from django.conf import settings
 from django.core import mail
 from django.test import TestCase
 from django.urls import reverse
+from django.utils import timezone
 
-from apps.accounts.forms import SignupForm
 from apps.accounts.models import LoginAttempt, User
-from apps.core.testing import MediaRootMixin, make_admin, png_upload
-
-
-class SignupTests(TestCase):
-    def test_valid_signup_creates_hashed_account(self):
-        response = self.client.post(
-            reverse("accounts:signup"),
-            {
-                "name": "Peter Odhiambo",
-                "email": "Peter@Example.COM",
-                "phone": "0712 345 678",
-                "password1": "Kagan#Fees2026",
-                "password2": "Kagan#Fees2026",
-            },
-        )
-        self.assertRedirects(response, reverse("membership:register"))
-        user = User.objects.get(email="peter@example.com")
-        self.assertNotEqual(user.password, "Kagan#Fees2026")
-        self.assertTrue(user.check_password("Kagan#Fees2026"))
-        self.assertEqual(user.phone, "+254712345678")
-
-    def test_duplicate_email_is_rejected(self):
-        User.objects.create_user(email="dup@example.com", name="One", password="Strong#Pass1")
-        form = SignupForm(
-            {
-                "name": "Two",
-                "email": "dup@example.com",
-                "password1": "Strong#Pass2",
-                "password2": "Strong#Pass2",
-            }
-        )
-        self.assertFalse(form.is_valid())
-        self.assertIn("already has an account", form.errors["email"][0])
-
-    def test_weak_password_is_rejected(self):
-        form = SignupForm(
-            {"name": "Weak", "email": "weak@example.com", "password1": "password", "password2": "password"}
-        )
-        self.assertFalse(form.is_valid())
-        self.assertIn("password1", form.errors)
-
-    def test_passwords_must_match(self):
-        form = SignupForm(
-            {
-                "name": "Mismatch",
-                "email": "mismatch@example.com",
-                "password1": "First#Pass123",
-                "password2": "Second#Pass123",
-            }
-        )
-        self.assertFalse(form.is_valid())
-        self.assertIn("do not match", form.errors["password2"][0])
-
-    def test_non_kenyan_phone_is_rejected(self):
-        form = SignupForm(
-            {
-                "name": "Phone",
-                "email": "phone@example.com",
-                "phone": "12345",
-                "password1": "Strong#Pass1",
-                "password2": "Strong#Pass1",
-            }
-        )
-        self.assertFalse(form.is_valid())
-        self.assertIn("Kenyan", form.errors["phone"][0])
+from apps.core.testing import MediaRootMixin, make_admin, make_member, png_upload, register_payload, seed_dropdown_options
+from apps.membership.models import Member
 
 
 class ProfilePhotoTests(MediaRootMixin, TestCase):
     def test_large_photo_is_resized_and_stored(self):
         self.enable_temp_media()
-        big = png_upload(name="big.png", size=(1600, 1200))
+        seed_dropdown_options()
         response = self.client.post(
-            reverse("accounts:signup"),
-            {
-                "name": "Photo Person",
-                "email": "photo@example.com",
-                "password1": "Strong#Pass1",
-                "password2": "Strong#Pass1",
-                "photo": big,
-            },
+            reverse("membership:register"),
+            register_payload(email="photo@example.com", phone="0722 000 222", photo=png_upload(name="big.png", size=(1600, 1200))),
         )
         self.assertEqual(response.status_code, 302)
         user = User.objects.get(email="photo@example.com")
@@ -113,15 +46,11 @@ class ProfilePhotoTests(MediaRootMixin, TestCase):
 
 class LoginTests(TestCase):
     def setUp(self):
-        self.member = User.objects.create_user(
-            email="member@example.com", name="Member", password="Member#2026"
-        )
+        self.member = make_member(email="member@example.com", phone="+254712345678").user
         self.admin = make_admin()
 
     def _login(self, email, password):
-        return self.client.post(
-            reverse("accounts:login"), {"username": email, "password": password}
-        )
+        return self.client.post(reverse("accounts:login"), {"username": email, "password": password})
 
     def test_member_goes_home(self):
         response = self._login("member@example.com", "Member#2026")
@@ -134,6 +63,21 @@ class LoginTests(TestCase):
     def test_admin_lands_on_the_admin_dashboard(self):
         response = self._login("committee@example.org", "Committee#2026")
         self.assertRedirects(response, reverse("admin_panel:dashboard"))
+        self.assertIsNone(self.admin.membership, "administrators never need a membership row")
+
+    def test_an_account_that_has_not_verified_its_email_is_refused(self):
+        User.objects.create_user(
+            email="waiting@example.com", name="Waiting", password="Member#2026", is_active=False
+        )
+        response = self._login("waiting@example.com", "Member#2026")
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("_auth_user_id", self.client.session)
+        self.assertIn("not verified", response.context_data["form"].errors["__all__"][0])
+
+    def test_a_verified_account_without_a_membership_is_sent_to_complete_it(self):
+        User.objects.create_user(email="legacy@example.com", name="Legacy", password="Member#2026")
+        response = self._login("legacy@example.com", "Member#2026")
+        self.assertRedirects(response, reverse("membership:complete"))
 
     def test_wrong_password_does_not_sign_in(self):
         response = self._login("member@example.com", "nope")
@@ -165,6 +109,58 @@ class LoginTests(TestCase):
     def test_login_page_has_no_username_field(self):
         response = self.client.get(reverse("accounts:login"))
         self.assertContains(response, "Email address")
+
+    def test_login_page_offers_the_code_and_the_single_registration_form(self):
+        response = self.client.get(reverse("accounts:login"))
+        self.assertContains(response, reverse("accounts:resend_code"))
+        self.assertContains(response, "Register as a Member")
+        self.assertNotContains(response, reverse("accounts:signup"))
+
+
+class ResendCodeTests(TestCase):
+    def setUp(self):
+        seed_dropdown_options()
+        self.client.post(reverse("membership:register"), register_payload())
+        self.member = Member.objects.get(email="jane@example.com")
+
+    def _notes(self, response):
+        return " ".join(str(message) for message in response.context["messages"])
+
+    def _clear_cooldown(self):
+        Member.objects.filter(pk=self.member.pk).update(
+            last_code_sent_at=timezone.now() - timedelta(seconds=settings.VERIFICATION_RESEND_COOLDOWN_SECONDS + 1)
+        )
+
+    def test_a_fresh_code_is_emailed(self):
+        self._clear_cooldown()
+        before = len(mail.outbox)
+        response = self.client.post(reverse("accounts:resend_code"), {"email": "jane@example.com"}, follow=True)
+        self.assertEqual(len(mail.outbox), before + 1)
+        self.assertIn("new 6-digit code", self._notes(response))
+        self.assertFalse(Member.objects.get(pk=self.member.pk).verified)
+
+    def test_the_cooldown_blocks_a_second_send(self):
+        before = len(mail.outbox)
+        response = self.client.post(reverse("accounts:resend_code"), {"email": "jane@example.com"}, follow=True)
+        self.assertEqual(len(mail.outbox), before)
+        self.assertIn("Please wait", self._notes(response))
+
+    def test_an_unknown_email_is_answered_the_same_way_as_a_real_one(self):
+        response = self.client.post(reverse("accounts:resend_code"), {"email": "nobody@example.com"}, follow=True)
+        self.assertEqual(len(mail.outbox), 1, "the registration email from setUp only")
+        self.assertIn("If that email belongs", self._notes(response))
+
+    def test_a_confirmed_member_is_not_sent_another_code(self):
+        self.member.confirm_membership()
+        self._clear_cooldown()
+        before = len(mail.outbox)
+        response = self.client.post(reverse("accounts:resend_code"), {"email": "jane@example.com"}, follow=True)
+        self.assertEqual(len(mail.outbox), before)
+        self.assertIn("If that email belongs", self._notes(response))
+
+    def test_the_page_is_reachable_from_a_link_on_login(self):
+        response = self.client.get(reverse("accounts:resend_code"))
+        self.assertContains(response, "Resend verification code")
 
 
 class PasswordResetTests(TestCase):

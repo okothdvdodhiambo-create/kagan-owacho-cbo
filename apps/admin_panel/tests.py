@@ -220,6 +220,8 @@ class AdminSettingsTests(TestCase):
             reverse("admin_panel:settings_options"),
             {"field": "role", "label": "Bursary Committee", "order": 5, "active": "on"},
         )
+        # The combined form is a guest page, so an admin previewing it has to log out first.
+        self.client.logout()
         response = self.client.get(reverse("membership:register"))
         self.assertContains(response, "Bursary Committee")
 

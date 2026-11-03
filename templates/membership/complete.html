@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="koco-card">
+      <div class="koco-card-flat">
+        <h1 class="koco-section-title mb-1">Complete your membership</h1>
+        <p class="koco-muted mb-0">
+          Your login account works, but we still need the member details behind it. Fill this in and
+          we will email a 6-digit code to <strong>{{ user.email }}</strong> to confirm your email
+          before you reach the dashboard.
+        </p>
+      </div>
+
+      <div class="koco-card-flat">
+        <form method="post" class="koco-form" novalidate>
+          {% csrf_token %}
+          {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+              {% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+            </div>
+          {% endif %}
+          <div class="row g-3">
+            <div class="col-md-6">{% include "partials/_field.html" with field=form.phone %}</div>
+            <div class="col-md-6">{% include "partials/_field.html" with field=form.gender %}</div>
+            <div class="col-md-6">{% include "partials/_field.html" with field=form.role %}</div>
+            <div class="col-md-6">{% include "partials/_field.html" with field=form.occupation %}</div>
+            <div class="col-md-6">{% include "partials/_field.html" with field=form.location %}</div>
+            <div class="col-md-6">{% include "partials/_field.html" with field=form.sub_location %}</div>
+          </div>
+          <div class="d-flex flex-wrap gap-2 align-items-center mt-2">
+            <button class="koco-btn koco-btn-primary" type="submit">
+              <i class="fa fa-paper-plane"></i> Save and email my code
+            </button>
+            <form method="post" action="{% url 'accounts:logout' %}" class="d-inline">
+              {% csrf_token %}
+              <button class="koco-btn koco-btn-ghost" type="submit">Not you? Log out</button>
+            </form>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -127,6 +127,33 @@
         </p>
       </div>
       <div class="koco-card-flat">
+        <h2 class="h6">Email verification</h2>
+        <p class="small-muted mb-2">
+          {% if member.verified %}
+            This member confirmed their email on {{ member.verified_at|date:"d M Y" }}.
+          {% else %}
+            The 6-digit code has not been confirmed yet, so the login account stays inactive.
+            You can send a fresh code or verify by hand.
+          {% endif %}
+        </p>
+        {% if not member.verified %}
+          <form method="post" class="mb-2">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="resend_code">
+            <button class="koco-btn koco-btn-outline koco-btn-sm w-100" type="submit">
+              <i class="fa fa-envelope"></i> Send a new code by email
+            </button>
+          </form>
+          <form method="post" class="mb-2" data-confirm="Verify {{ member.full_name }} by hand?">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="verify_now">
+            <button class="koco-btn koco-btn-primary koco-btn-sm w-100" type="submit">
+              <i class="fa fa-circle-check"></i> Verify this member by hand
+            </button>
+          </form>
+        {% endif %}
+      </div>
+      <div class="koco-card-flat">
         <h2 class="h6">Change membership status</h2>
         {% if member.status == 'active' %}
           <form method="post" data-confirm="Suspend {{ member.full_name }}? They keep their records but cannot use the member area.">

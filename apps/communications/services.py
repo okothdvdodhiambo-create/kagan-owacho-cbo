@@ -7,11 +7,16 @@ from django.utils import timezone
 from apps.core.models import SiteSettings
 
 from .mail import notify_admins, send_template_email, send_text_email
-from .sms import send_sms
+from .sms import send_sms, sms_configured
 
 
 def _org():
     return SiteSettings.load().organization_name
+
+
+def default_verification_channel():
+    """Email is the default; SMS is only added when a real provider is configured."""
+    return "both" if sms_configured() else "email"
 
 
 def _member_context(member):
@@ -23,20 +28,21 @@ def _member_context(member):
     }
 
 
-def send_verification_code(member, plaintext, channel="both"):
-    """Deliver a 6-digit code by SMS, email, or both. Returns a delivery report."""
+def send_verification_code(member, plaintext, channel=None):
+    """Deliver a 6-digit code by email, plus SMS when that channel is selected. Returns a report."""
+    channel = channel or member.verification_channel or "email"
     report = {"sms": None, "email": 0}
     template_context = {**_member_context(member), "code": plaintext, "minutes": settings.VERIFICATION_TTL_MINUTES}
 
-    if channel in ("sms", "both"):
-        body = render_to_string("emails/verification_sms.txt", template_context).strip()
-        report["sms"] = send_sms(member.phone, body)
-
-    if channel in ("email", "both"):
+    if channel in ("email", "both") and member.email:
         subject = f"{_org()} - your verification code is {plaintext}"
         report["email"] = send_template_email(
             subject, "emails/verification_email.txt", template_context, [member.email]
         )
+
+    if channel in ("sms", "both") and sms_configured():
+        body = render_to_string("emails/verification_sms.txt", template_context).strip()
+        report["sms"] = send_sms(member.phone, body)
     return report
 
 
@@ -44,10 +50,12 @@ def send_membership_confirmation(member):
     context = _member_context(member)
     subject = f"Welcome to {_org()} - membership {member.membership_no}"
     emailed = send_template_email(subject, "emails/membership_confirmed.txt", context, [member.email])
-    sms = send_sms(
-        member.phone,
-        render_to_string("emails/membership_confirmed_sms.txt", context).strip(),
-    )
+    sms = None
+    if sms_configured():
+        sms = send_sms(
+            member.phone,
+            render_to_string("emails/membership_confirmed_sms.txt", context).strip(),
+        )
     return {"emailed": bool(emailed), "sms": bool(sms)}
 
 

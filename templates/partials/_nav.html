@@ -22,7 +22,7 @@
         <div class="koco-nav-cta">
           {% if user.is_authenticated and user.membership and not user.membership.verified %}
             <a class="koco-btn koco-btn-gold koco-btn-sm" href="{% url 'membership:verify' %}">
-              <i class="fa fa-mobile-screen"></i> Confirm code
+              <i class="fa fa-envelope-open-text"></i> Enter my code
             </a>
           {% endif %}
           <a class="koco-btn koco-btn-outline koco-btn-sm" href="{{ SITE.whatsapp_url }}" target="_blank" rel="noopener">

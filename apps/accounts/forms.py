@@ -1,11 +1,15 @@
-"""Authentication, registration and profile forms."""
+"""Authentication and profile forms.
+
+Registration itself lives in apps.membership.forms.RegisterForm, because an
+account and a membership are now created together in one step.
+"""
 
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm as DjangoPasswordChangeForm
 from django.contrib.auth.password_validation import get_default_password_validators
 from django.core.exceptions import ValidationError
 
-from apps.core.utils import kenyan_phone_to_254, validate_image_file
+from apps.core.utils import kenyan_phone_to_254
 
 from .models import LoginAttempt, User
 
@@ -18,7 +22,7 @@ def password_help_text():
 
 
 class ThrottledAuthenticationForm(AuthenticationForm):
-    """Login with email + password only; blocks after repeated wrong attempts."""
+    """Login with email + password only; unverified accounts are refused with a way out."""
 
     def __init__(self, request=None, *args, **kwargs):
         super().__init__(request, *args, **kwargs)
@@ -40,6 +44,12 @@ class ThrottledAuthenticationForm(AuthenticationForm):
                 f"Too many wrong attempts on this account. Wait {minutes} minute(s) and try again, "
                 "or use 'Forgot password'."
             )
+        user = User.objects.filter(email__iexact=email).first()
+        if user is not None and not user.is_active and not user.is_administrator:
+            raise forms.ValidationError(
+                "This account is not verified yet. Enter the 6-digit code we emailed you, or use "
+                "'Resend verification code' below to get a fresh one."
+            )
         try:
             cleaned = super().clean()
         except forms.ValidationError:
@@ -49,61 +59,13 @@ class ThrottledAuthenticationForm(AuthenticationForm):
         return cleaned
 
 
-class SignupForm(forms.Form):
-    name = forms.CharField(max_length=150, widget=INPUT)
+class ResendCodeForm(forms.Form):
+    """Asks for a fresh verification code for an account that is still inactive."""
+
     email = forms.EmailField(widget=forms.EmailInput(attrs={"class": "form-control"}))
-    phone = forms.CharField(
-        required=False, widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "+2547XXXXXXXX"})
-    )
-    password1 = forms.CharField(label="Password", strip=False, widget=PASSWORD, help_text=password_help_text())
-    password2 = forms.CharField(label="Confirm password", strip=False, widget=PASSWORD)
-    photo = forms.ImageField(
-        required=False,
-        validators=[validate_image_file],
-        widget=forms.FileInput(attrs={"class": "form-control", "accept": "image/*"}),
-    )
 
     def clean_email(self):
-        email = self.cleaned_data["email"].strip().lower()
-        if User.objects.filter(email__iexact=email).exists():
-            raise ValidationError("That email address already has an account. Try logging in instead.")
-        return email
-
-    def clean_phone(self):
-        raw = self.cleaned_data.get("phone") or ""
-        if not raw:
-            return ""
-        normalised = kenyan_phone_to_254(raw)
-        if not normalised:
-            raise ValidationError("Use a Kenyan number such as 07XX XXX XXX or +2547XX XXX XXX.")
-        return normalised
-
-    def clean(self):
-        cleaned = super().clean()
-        password = cleaned.get("password1")
-        if password and cleaned.get("password2") != password:
-            self.add_error("password2", "The two passwords do not match.")
-        if password:
-            draft = User(name=cleaned.get("name", ""), email=cleaned.get("email", ""))
-            try:
-                _validate_password(password, draft)
-            except ValidationError as exc:
-                self.add_error("password1", exc.messages)
-        return cleaned
-
-    def create_user(self):
-        return User.objects.create_user(
-            email=self.cleaned_data["email"],
-            name=self.cleaned_data["name"].strip(),
-            password=self.cleaned_data["password1"],
-            phone=self.cleaned_data.get("phone", ""),
-            photo=self.cleaned_data.get("photo"),
-        )
-
-
-def _validate_password(password, user):
-    for validator in get_default_password_validators():
-        validator.validate(password, user)
+        return self.cleaned_data["email"].strip().lower()
 
 
 class ProfileForm(forms.ModelForm):
@@ -118,9 +80,14 @@ class ProfileForm(forms.ModelForm):
         }
 
     def clean_email(self):
+        from apps.membership.models import Member
+
         email = self.cleaned_data["email"].strip().lower()
         if User.objects.filter(email__iexact=email).exclude(pk=self.instance.pk).exists():
             raise ValidationError("Another account already uses that email address.")
+        taken = Member.objects.filter(email__iexact=email).exclude(user=self.instance)
+        if taken.exists():
+            raise ValidationError("That email address already belongs to another member.")
         return email
 
     def clean_phone(self):

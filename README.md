@@ -16,7 +16,7 @@ If you only want to start it on a laptop, go straight to
 | Area | What a member sees | What the committee sees |
 |---|---|---|
 | Public pages | Home page with the photo slider, About, Events Sponsored, Event Calendar, Register | Same pages, plus drafts that are not published |
-| Membership | Register, then enter the code sent by email/SMS, then a member dashboard with their KOC number | Full member list, search, filters, view/suspend/activate/delete, CSV & Excel export |
+| Membership | One **Register as a Member** form (account + member details), then the 6-digit code emailed to them, then a member dashboard with their KOC number | Full member list, search, filters, verified column, resend code / verify by hand, suspend/activate/delete, CSV & Excel export |
 | Money | Pay by M-Pesa prompt, record an M-Pesa code, or upload a bank slip; see their transcript; download a signed PDF statement | Every payment with status, confirm or reject with a reason, totals, filters, export |
 | Events | Calendar (month + list), event pages, written reports with photos | Create/edit/delete events and reports, upload photo galleries, email a report to all members |
 | Problems | Report an incident with an attachment, see the committee's reply | Inbox of incidents, reply, change status, assign themselves |
@@ -34,8 +34,14 @@ member's information.
 | Type | How they get it | Where they land after login |
 |---|---|---|
 | **Administrator** | Two accounts are created automatically from the `.env` file | `/admin-panel/` (the full committee dashboard) |
-| **Member** | Registers on the site, then confirms the code | Home page, then `/member/dashboard/` |
+| **Member** | Fills in the single **Register as a Member** form, then confirms the 6-digit code emailed to them | Home page, then `/member/dashboard/` |
 | **Visitor** | No login | Public pages only |
+
+There is no "create an account" step any more: the account and the membership are made by the same
+form, and an account only opens once its email has been confirmed. Login is refused with a
+"Resend verification code" link until then. Every login that is not an administrator has a membership
+row; an account left over from the old two-step flow is taken to a "Complete your membership" page
+straight after login.
 
 A normal member who types an admin address gets a friendly "This area is for the committee" page
 (HTTP 403). The check is on the `is_admin` flag, not on Django's staff flag, so nobody can slip in
@@ -152,19 +158,39 @@ events, and the demo reports. They exist only so that every page has something t
 
 ## 7. How a member joins
 
-1. They press **Register as a Member** and fill in name, phone, e-mail, gender, role, location,
-   sub-location and (optional) occupation. Gender and role must be values from the dropdown options.
-2. The phone number is normalised to `+2547...` — `0712 345 678`, `+254712345678` and
-   `00254712345678` all mean the same person.
-3. They get a **6-digit code** by e-mail and/or SMS and are sent to the "check your code" page.
+One form, one step. **Register as a Member** (also reached from the login page) asks for everything
+at once:
+
+* **Your account** — full name as on the national ID, e-mail address, password + confirmation, profile
+  photo (optional).
+* **Member details** — phone number, gender, role, location, sub-location, occupation (optional).
+  Gender, role and occupation only accept values the committee has published under *Dropdown options*.
+
+What happens next:
+
+1. The phone number is normalised to `+2547...` — `0712 345 678`, `+254712345678` and
+   `00254712345678` all mean the same person. E-mail and phone must both be unique.
+2. The account is created **inactive** and the membership **pending**, then a **6-digit code is
+   e-mailed** to the address they typed.
    * The code is valid for **10 minutes**, allows **5 guesses**, and can be re-sent once a minute.
    * Only the **hash** of the code is stored in the database, not the code itself.
-   * With no SMS/e-mail configured the code is printed in the terminal (and logged), so you can
-     always finish the flow while testing.
-4. On the right code they are logged in, given the next number (`KOC-0001`, `KOC-0002`, …) and marked
-   active. Numbers never repeat, even if two people register in the same second.
-5. Until the code is confirmed they are *pending* and cannot pay or post incidents; the admin can
-   also see who is waiting.
+   * SMS is an optional extra: it is only sent in addition when `SMS_PROVIDER=africastalking` and the
+     Africa's Talking keys are set. Nothing in the site depends on SMS or on Daraja.
+   * While `EMAIL_HOST` is empty, and always while `DEBUG=True`, the code is also printed in the
+     terminal, so you can finish the flow without a mail server.
+   * If the mail server refuses the send, the page says so plainly and keeps the registration; it
+     never crashes, and the account simply stays inactive until a code arrives.
+3. On the right code they are logged in, the account is switched on, the membership is given the next
+   number (`KOC-0001`, `KOC-0002`, …) and a confirmation e-mail is sent. Numbers never repeat, even if
+   two people register in the same second.
+4. Until the code is confirmed they are *pending*: they cannot pay or post incidents, and the admin
+   panel shows exactly who is still waiting.
+5. Re-submitting the form with the same e-mail while the code is still unconfirmed refreshes the same
+   account and membership, so a typo never locks a person out.
+
+Accounts that were created by the older two-step flow are handled by a data migration
+(`membership.0003`): they keep logging in, are taken to a **Complete your membership** page right
+after login, and confirm their e-mail with a code like everybody else.
 
 ---
 
@@ -295,14 +321,17 @@ Nothing in the code has a secret in it. Fill these in `.env`:
 | `DEBUG=False`, `ALLOWED_HOSTS=your-domain.com` | your domain | production security mode |
 | `CSRF_TRUSTED_ORIGINS=https://your-domain.com` | your domain | forms to submit over HTTPS |
 | `ADMIN1_*`, `ADMIN2_*` | you decide | the two committee logins — change the defaults |
-| `EMAIL_HOST`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` | Gmail app password, or your hosting SMTP | verification e-mails, receipts, announcements |
-| `AFRICASTALKING_USERNAME`, `AFRICASTALKING_API_KEY`, `AFRICASTALKING_SENDER_ID`, `SMS_PROVIDER=africastalking` | africastalking.com | SMS verification codes |
+| `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USE_TLS`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `DEFAULT_FROM_EMAIL` | Gmail app password, or your hosting SMTP | **required for real sign-ups** — this is where the 6-digit verification code goes |
+| `EMAIL_TIMEOUT` | seconds, default `10` | how long the registration page waits on a slow mail server |
+| `AFRICASTALKING_USERNAME`, `AFRICASTALKING_API_KEY`, `AFRICASTALKING_SENDER_ID`, `SMS_PROVIDER=africastalking` | africastalking.com | optional extra SMS copy of the code (email alone is enough) |
 | `MPESA_CONSUMER_KEY`, `MPESA_CONSUMER_SECRET`, `MPESA_SHORTCODE`, `MPESA_PASSKEY`, `MPESA_ENV`, `MPESA_CALLBACK_URL` | developer.safaricom.co.ke (Daraja) | the "pay on my phone" prompt |
 | `DATABASE_URL` | your database host | PostgreSQL instead of SQLite |
 | Logo, three slider photos, motto, bank details, social links | the CBO's own material | uploaded in Site settings, not in `.env` |
 
 While any of these are empty the site still runs: e-mails and SMS are printed to the terminal, and
-the M-Pesa prompt falls back to the manual code form.
+the M-Pesa prompt falls back to the manual code form. That is fine for testing but **not for the
+public site**: with no `EMAIL_HOST` on Render, a person who registers never receives a code, so their
+account stays closed until the committee verifies them by hand from the admin panel.
 
 ---
 

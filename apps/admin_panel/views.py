@@ -85,6 +85,7 @@ def member_list(request):
     status = request.GET.get("status") or ""
     role = request.GET.get("role") or ""
     gender = request.GET.get("gender") or ""
+    verified = request.GET.get("verified") or ""
     if search:
         queryset = queryset.filter(
             Q(full_name__icontains=search)
@@ -99,6 +100,10 @@ def member_list(request):
         queryset = queryset.filter(role=role)
     if gender:
         queryset = queryset.filter(gender=gender)
+    if verified == "yes":
+        queryset = queryset.filter(verified=True)
+    elif verified == "no":
+        queryset = queryset.filter(verified=False)
     fmt = request.GET.get("export")
     if fmt in ("csv", "xlsx"):
         return exports.export_members(queryset, fmt)
@@ -113,6 +118,8 @@ def member_list(request):
         "selected_status": status,
         "selected_role": role,
         "selected_gender": gender,
+        "selected_verified": verified,
+        "accounts_without_membership": User.objects.filter(is_admin=False, profile__isnull=True).count(),
         "total_value": float(
             Contribution.objects.filter(member__in=queryset, status=Contribution.Status.CONFIRMED).aggregate(s=Sum("amount"))["s"] or 0
         ),
@@ -146,19 +153,36 @@ def member_detail(request, pk):
 
 @transaction.atomic
 def _member_action(request, member):
+    from django.conf import settings
+
+    from apps.membership import services as membership_services
+
     action = request.POST.get("action")
     actor = request.user
+    error = False
     if action == "suspend":
         member.status = Member.Status.SUSPENDED
         member.save(update_fields=["status", "updated_at"])
         message = f"{member.full_name} was suspended."
     elif action == "activate":
-        member.status = Member.Status.ACTIVE
-        member.verified = True
-        if not member.membership_no:
-            member.membership_no = Member.next_membership_no()
-        member.save(update_fields=["status", "verified", "membership_no", "updated_at"])
-        message = f"{member.full_name} is active again."
+        membership_services.confirm_membership(member, request)
+        message = f"{member.full_name} is active again as {member.membership_no}."
+    elif action == "verify_now":
+        membership_services.confirm_membership(member, request)
+        message = f"{member.full_name} is verified as {member.membership_no} and their account is active."
+    elif action == "resend_code":
+        allowed, seconds = member.can_resend_code
+        if not allowed:
+            messages.error(request, f"Please wait {seconds} seconds before sending another code.")
+            return redirect("admin_panel:member_detail", pk=member.pk)
+        _code, plaintext, report = membership_services.issue_code(member)
+        if membership_services.email_failed(report):
+            message = f"The code could not be emailed to {member.email}. Check the SMTP settings."
+            error = True
+        else:
+            message = f"A fresh 6-digit code was emailed to {member.email}."
+        if settings.DEBUG:
+            messages.info(request, f"Development mode - the code is {plaintext}.")
     elif action == "reset_access":
         message = _send_password_link(member, request)
     elif action == "delete":
@@ -174,7 +198,10 @@ def _member_action(request, member):
         messages.error(request, "Unknown action.")
         return redirect("admin_panel:member_detail", pk=member.pk)
     AuditLog.record(actor, f"member.{action}", target=member.membership_no or member.email, request=request)
-    messages.success(request, message)
+    if error:
+        messages.error(request, message)
+    else:
+        messages.success(request, message)
     return redirect("admin_panel:member_detail", pk=member.pk)
 
 

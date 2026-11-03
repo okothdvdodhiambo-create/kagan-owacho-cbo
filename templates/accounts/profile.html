@@ -12,14 +12,17 @@
       {% endif %}
       <h2 class="h5 mt-3 mb-0">{{ user.name }}</h2>
       <p class="small-muted mb-0">{{ user.email }}</p>
-      {% if user.membership %}
+      {% if member %}
         <p class="mt-2 mb-0">
-          <span class="badge {% if user.membership.verified %}badge-soft-success{% else %}badge-soft-warning{% endif %}">
-            {{ user.membership.membership_no|default:"waiting for verification" }}
+          <span class="badge {% if member.verified %}badge-soft-success{% else %}badge-soft-warning{% endif %}">
+            {{ member.membership_no|default:"waiting for verification" }}
           </span>
         </p>
-      {% else %}
-        <a class="koco-btn koco-btn-outline koco-btn-sm mt-3" href="{% url 'membership:register' %}">Register as a member</a>
+        {% if not member.verified %}
+          <a class="koco-btn koco-btn-outline koco-btn-sm mt-3" href="{% url 'membership:verify' %}">Enter my code</a>
+        {% endif %}
+      {% elif not user.is_administrator %}
+        <a class="koco-btn koco-btn-outline koco-btn-sm mt-3" href="{% url 'membership:complete' %}">Complete your membership</a>
       {% endif %}
       <div class="koco-divider"></div>
       <a class="koco-btn koco-btn-ghost koco-btn-sm bg-leaf text-white w-100 justify-content-center" href="{% url 'accounts:password_change' %}">
@@ -31,9 +34,30 @@
   <div class="col-12 col-md-7 col-lg-6">
     <div class="koco-card koco-form">
       <h1 class="page-title h4 mb-3">Edit profile</h1>
-      <form method="post" enctype="multipart/form-data" novalidate>
+      <p class="small-muted">Your account and your membership details are saved together in one go.</p>
+      <form method="post" enctype="multipart/form-data" class="koco-form" novalidate>
         {% csrf_token %}
-        {% include "partials/_form_fields.html" %}
+
+        <h2 class="koco-subtitle h6 mb-2"><i class="fa fa-user me-1 koco-green"></i> Account</h2>
+        {% include "partials/_field.html" with field=account_form.name %}
+        {% include "partials/_field.html" with field=account_form.email %}
+        {% include "partials/_field.html" with field=account_form.photo %}
+
+        {% if member_form %}
+          <h2 class="koco-subtitle h6 mt-4 mb-2"><i class="fa fa-id-card me-1 koco-green"></i> Member details</h2>
+          <div class="row g-3">
+            <div class="col-md-6">{% include "partials/_field.html" with field=member_form.phone %}</div>
+            <div class="col-md-6">{% include "partials/_field.html" with field=member_form.gender %}</div>
+            <div class="col-md-6">{% include "partials/_field.html" with field=member_form.role %}</div>
+            <div class="col-md-6">{% include "partials/_field.html" with field=member_form.occupation %}</div>
+            <div class="col-md-6">{% include "partials/_field.html" with field=member_form.location %}</div>
+            <div class="col-md-6">{% include "partials/_field.html" with field=member_form.sub_location %}</div>
+          </div>
+        {% else %}
+          <p class="small-muted">Your login phone number is kept with the account above.</p>
+          {% include "partials/_field.html" with field=account_form.phone %}
+        {% endif %}
+
         <button type="submit" class="koco-btn koco-btn-primary"><i class="fa fa-floppy-disk"></i> Save changes</button>
         <a href="{% url 'membership:dashboard' %}" class="koco-btn koco-btn-outline">Back to dashboard</a>
       </form>

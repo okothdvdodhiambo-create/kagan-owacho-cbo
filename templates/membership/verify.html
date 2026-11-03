@@ -5,12 +5,12 @@
   <div class="col-md-8 col-lg-6">
     <div class="koco-card">
       <div class="koco-card-flat text-center">
-        <div class="koco-logo-mark mx-auto mb-3"><i class="fa fa-mobile-screen-button"></i></div>
+        <div class="koco-logo-mark mx-auto mb-3"><i class="fa fa-envelope-open-text"></i></div>
         <h1 class="koco-section-title mb-1">Enter your 6-digit code</h1>
         <p class="koco-muted mb-0">
-          Sent to <strong>{{ member.phone }}</strong>
-          {% if member.verification_channel != 'sms' %} and <strong>{{ member.email }}</strong>{% endif %}.
-          The code works for 10 minutes.
+          Sent to <strong>{{ member.email }}</strong>{% if member.verification_channel == 'both' %} and by SMS
+          to <strong>{{ member.phone }}</strong>{% endif %}.
+          The code works for 10 minutes. Your account stays inactive until you enter it.
         </p>
       </div>
 
@@ -47,7 +47,8 @@
           </p>
         {% endif %}
         <p class="small-muted mt-2 mb-0 text-center">
-          Wrong number or email? <a href="{% url 'membership:register' %}">Edit your details</a> and resend.
+          Wrong email or number? <a href="{% url 'membership:register' %}">Fix your details</a> and we will
+          send a fresh code.
         </p>
       </div>
     </div>

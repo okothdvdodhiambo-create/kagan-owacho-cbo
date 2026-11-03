@@ -97,6 +97,7 @@ Render dashboard → New → Blueprint → (authorise GitHub) → pick okothdvdo
 | `MEDIA_STORAGE` | `database` — see "uploaded files" below |
 | `ADMIN1_EMAIL`, `ADMIN1_PASSWORD`, `ADMIN2_EMAIL`, `ADMIN2_PASSWORD` | **you type these**, `sync: false`, never stored in git |
 | `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS` | not needed: `config/settings.py` adds `RENDER_EXTERNAL_HOSTNAME` automatically |
+| `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USE_TLS`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `DEFAULT_FROM_EMAIL` | **you type these in the Environment tab** — see section 5. Without them a new member never receives their code |
 
 The build runs `pip install -r requirements.txt`, `collectstatic`, then `migrate`. That `migrate`
 fires `apps/core/signals.py` → `bootstrap_site`, which creates both administrator accounts from the
@@ -104,6 +105,12 @@ environment variables, the navigation, the dropdown lists and the sample content
 Render Shell is ever needed. `bootstrap_site` refuses an account whose password is still the
 placeholder from `config/settings.py`, and refuses an empty password, so a live site cannot be
 reachable through the credentials printed in the README.
+
+The same `migrate` also runs `membership.0003`, which brings the old two-step data into the single
+flow: members who were already verified are linked to the account that shares their e-mail, accounts
+left half-registered are allowed to sign in again, and any account without a membership row is given
+a pending one so its owner is asked to complete their details after logging in. Nobody who could use
+the site before loses access.
 
 **Uploaded files.** Render gives free instances **no persistent disk**, so anything written to
 `MEDIA_ROOT` disappears at the next restart or deploy. This project therefore stores uploads —
@@ -223,7 +230,10 @@ refused), and `location /media/ { alias /home/kagan/kagan-owacho-cbo/media/; }`.
 
 ---
 
-## 6. SMS (Africa's Talking) — codes by text message
+## 6. SMS (Africa's Talking) — optional extra copy of the code
+
+Verification codes go to the member's **e-mail** by default. SMS is only sent *in addition* when all
+three of a named provider and its keys are present:
 
 ```ini
 SMS_PROVIDER=africastalking
@@ -232,12 +242,16 @@ AFRICASTALKING_API_KEY=<your API key>
 AFRICASTALKING_SENDER_ID=KAGANOWACHO   # or a short code you have been given
 ```
 
-With `SMS_PROVIDER=console` (the default) the message is printed in the server log instead of being
-sent, and during development also echoed in the terminal.
+Leave `SMS_PROVIDER=console` (the default) and registration still works end to end on e-mail alone —
+nothing in the site waits on SMS or on Daraja.
 
 ---
 
-## 7. E-mail (SMTP) — verification, receipts, announcements
+## 7. E-mail (SMTP) — the verification code, receipts, announcements
+
+**This is the one service a public site must have configured**, because the 6-digit code that opens a
+new member's account is sent by e-mail. On Render: the service → **Environment** tab → add each line
+below → **Save Changes** → **Deploy** (the values are read at boot, so a deploy is what applies them).
 
 Gmail example (use an **App Password**, not your real password):
 
@@ -249,7 +263,12 @@ EMAIL_HOST_USER=kaganowacho@gmail.com
 EMAIL_HOST_PASSWORD=<16-character app password>
 DEFAULT_FROM_EMAIL=Kagan Owacho CBO <kaganowacho@gmail.com>
 ADMIN_INBOX_EMAIL=admin1@kaganowacho.org
+EMAIL_TIMEOUT=10
 ```
+
+`EMAIL_TIMEOUT` is how many seconds the registration page will wait on the mail server. A slow or
+unreachable server therefore delays the page briefly and then tells the member what happened instead
+of hanging the request; the account stays inactive until a code actually arrives.
 
 Test it from the server without sending a message through the site:
 
@@ -257,7 +276,10 @@ Test it from the server without sending a message through the site:
 python manage.py shell -c "from django.core.mail import send_mail; send_mail('Test','Kagan Owacho CBO test','noreply@example.org',['you@example.com'])"
 ```
 
-If `EMAIL_HOST` is empty, e-mails are printed to the console — the flows still complete.
+If `EMAIL_HOST` is empty, e-mails are printed to the console. On a laptop that is convenient — while
+`DEBUG=True` the code is also echoed on the screen — but on Render nobody sees that log, so a member
+would never get their code. Until SMTP is set, verify new members by hand from the admin panel
+(**Members → Verify this member by hand**).
 
 ---
 
@@ -309,9 +331,11 @@ Restore = copy both back and restart. Test a restore once; an untested backup is
 - [ ] HTTPS works and HTTP redirects to it
 - [ ] Logo, three slider photos, motto, bank details, paybill, WhatsApp number, social links filled in
 - [ ] Dropdown options (gender / role / occupation) match the ward
-- [ ] One real registration done end to end: code received by e-mail **and** SMS, verified, KOC number given
+- [ ] SMTP settings saved in the Render **Environment** tab (the code that opens a new account is e-mailed)
+- [ ] One real registration done end to end: one form, code received by e-mail, verified, KOC number given, dashboard reachable
+- [ ] An account created by the old two-step flow can still log in and is asked to complete its membership details
 - [ ] One real payment confirmed, and the PDF statement downloaded and printed
-- [ ] SMTP, SMS and (if used) Daraja keys verified in production mode
+- [ ] SMTP and (if used) SMS and Daraja keys verified in production mode
 - [ ] Audit log shows the actions above with the right admin and IP
 - [ ] Backup job scheduled and one restore tested
 - [ ] `/admin-panel/` refuses a member account with the friendly 403 page
@@ -325,7 +349,9 @@ Restore = copy both back and restart. Test a restore once; an untested backup is
 | `DisallowedHost at /` | The host you typed is not in `ALLOWED_HOSTS`. Add it (with and without `www`). |
 | CSS/images missing, 404 on `/static/...` | `collectstatic` was not run, or the host serves a different folder. Run it; on PythonAnywhere re-check the `/static/` mapping. |
 | Forms bounce back to the login page | The domain is missing from `CSRF_TRUSTED_ORIGINS`, or the site is behind a proxy that hides HTTPS. |
-| Verification code never arrives | `EMAIL_HOST` empty (it is printed in the log instead) or Gmail blocked the login — use an App Password. Same for SMS: `SMS_PROVIDER=console` prints it. |
+| Verification code never arrives | `EMAIL_HOST` empty (it is printed in the log instead) or Gmail blocked the login — use an App Password. SMS is only an extra copy and only when `SMS_PROVIDER=africastalking` with its keys. |
+| Login says the account is not verified | Correct behaviour: the e-mailed code has not been entered yet. Use **Resend verification code** on the login page, or verify the member by hand in the admin panel once you have checked their ID. |
+| A new member is stuck on "Complete your membership" | Their account came from the old two-step flow and has no member details. Fill the form once; a code is e-mailed and the membership then confirms as usual. |
 | STK push says "not configured" | Daraja keys missing or `MPESA_ENV` does not match the keys (sandbox keys only work against sandbox). |
 | Payment stays "awaiting" forever | Safaricom cannot reach `MPESA_CALLBACK_URL` — it must be public HTTPS with no auth; the members' page also polls the status, so check the callback log. |
 | `500` after a settings change | Read the server log; the styled 500 page is intentionally generic. Re-run `python manage.py check`. |

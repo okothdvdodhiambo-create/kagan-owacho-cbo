@@ -16,8 +16,8 @@
       <a class="koco-btn koco-btn-outline" href="{% url 'events:list' %}">
         <i class="fa fa-hand-holding-heart"></i> See what we sponsored
       </a>
-      {% if not user.is_authenticated %}
-        <a class="koco-btn koco-btn-outline" href="{% url 'accounts:signup' %}"><i class="fa fa-user-plus"></i> Create an account</a>
+      {% if user.is_authenticated %}
+        <a class="koco-btn koco-btn-outline" href="{% url 'membership:dashboard' %}"><i class="fa fa-gauge-high"></i> My dashboard</a>
       {% endif %}
     </div>
 

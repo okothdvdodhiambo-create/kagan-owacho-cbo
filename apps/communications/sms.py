@@ -88,17 +88,28 @@ class AfricaTalkingSMSBackend(SMSBackend):
 _active_backend = None
 
 
+def sms_configured():
+    """True only when a real SMS provider is named AND its keys are present.
+
+    Registration defaults to email, so SMS is strictly an extra channel and the
+    system never depends on it.
+    """
+    provider = (settings.SMS_PROVIDER or "console").lower()
+    return bool(
+        provider == "africastalking" and settings.AFRICASTALKING_API_KEY and settings.AFRICASTALKING_USERNAME
+    )
+
+
 def get_sms_backend():
     global _active_backend
     if _active_backend is not None:
         return _active_backend
-    provider = (settings.SMS_PROVIDER or "console").lower()
-    if provider == "africastalking" and settings.AFRICASTALKING_API_KEY and settings.AFRICASTALKING_USERNAME:
+    if sms_configured():
         _active_backend = AfricaTalkingSMSBackend(
             settings.AFRICASTALKING_USERNAME, settings.AFRICASTALKING_API_KEY, settings.AFRICASTALKING_SENDER_ID
         )
     else:
-        if provider == "africastalking":
+        if (settings.SMS_PROVIDER or "console").lower() == "africastalking":
             logger.warning("SMS_PROVIDER=africastalking but no API key in .env - using console SMS instead.")
         _active_backend = ConsoleSMSBackend()
     return _active_backend
