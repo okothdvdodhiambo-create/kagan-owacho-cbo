@@ -69,7 +69,9 @@ def resend_code(request):
                 messages.error(request, f"Please wait {seconds} seconds before requesting another code.")
             else:
                 _code, plaintext, report = membership_services.issue_code(member)
-                if membership_services.email_failed(report):
+                if membership_services.email_not_configured():
+                    messages.error(request, membership_services.EMAIL_NOT_CONFIGURED)
+                elif membership_services.email_failed(report):
                     messages.error(
                         request,
                         "We could not send the email just now. Please try again shortly or contact the treasurer.",

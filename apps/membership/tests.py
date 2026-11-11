@@ -2,6 +2,7 @@
 
 import importlib
 from datetime import timedelta
+from io import StringIO
 from unittest import mock
 
 from django.apps import apps as global_apps
@@ -161,6 +162,17 @@ class RegistrationViewTests(TestCase):
         self.assertTrue(Member.objects.filter(email="jane@example.com").exists())
         self.assertIn("could not be sent", self._notes(response))
 
+    def test_a_live_site_without_smtp_does_not_claim_the_code_was_sent(self):
+        # The console backend returns 1, so this is the "it said sent, nothing arrived" case.
+        with override_settings(
+            DEBUG=False, EMAIL_BACKEND="django.core.mail.backends.console.EmailBackend"
+        ), mock.patch("sys.stdout", new=StringIO()):
+            response = self.client.post(reverse("membership:register"), register_payload(), follow=True)
+        self.assertTrue(Member.objects.filter(email="jane@example.com").exists())
+        notes = self._notes(response)
+        self.assertIn("cannot send email yet", notes)
+        self.assertNotIn("Almost done", notes)
+
 
 class VerificationCodeTests(TestCase):
     def setUp(self):
@@ -255,6 +267,29 @@ class VerificationCodeTests(TestCase):
         before = len(mail.outbox)
         self.client.post(reverse("membership:verify"), {"resend": "1"})
         self.assertEqual(len(mail.outbox), before + 1)
+
+    def _ready_to_resend(self):
+        Member.objects.filter(pk=self.member.pk).update(
+            last_code_sent_at=timezone.now() - timedelta(seconds=settings.VERIFICATION_RESEND_COOLDOWN_SECONDS + 1)
+        )
+
+    def test_resending_when_smtp_fails_says_the_code_could_not_be_sent(self):
+        self._ready_to_resend()
+        with mock.patch("django.core.mail.EmailMultiAlternatives.send", side_effect=OSError("smtp is down")):
+            response = self.client.post(reverse("membership:verify"), {"resend": "1"}, follow=True)
+        notes = self._notes(response)
+        self.assertIn("could not be sent", notes)
+        self.assertNotIn("A new code is on its way", notes)
+
+    def test_resending_on_a_live_site_without_smtp_is_honest(self):
+        self._ready_to_resend()
+        with override_settings(
+            DEBUG=False, EMAIL_BACKEND="django.core.mail.backends.console.EmailBackend"
+        ), mock.patch("sys.stdout", new=StringIO()):
+            response = self.client.post(reverse("membership:verify"), {"resend": "1"}, follow=True)
+        notes = self._notes(response)
+        self.assertIn("cannot send email yet", notes)
+        self.assertNotIn("A new code is on its way", notes)
 
     def test_five_digit_code_is_not_even_tried(self):
         services.issue_code(self.member)

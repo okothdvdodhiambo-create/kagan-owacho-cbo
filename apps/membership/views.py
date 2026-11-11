@@ -86,9 +86,7 @@ def verify(request):
             messages.error(request, f"Please wait {seconds} seconds before requesting another code.")
         else:
             _code, plaintext, report = services.issue_code(member)
-            messages.info(request, "A new code is on its way. " + _delivery_note(report))
-            if settings.DEBUG:
-                messages.warning(request, f"Development mode - the code is {plaintext}.")
+            _announce_code(request, report, plaintext, resend=True)
         return redirect("membership:verify")
 
     form = VerificationCodeForm(request.POST or None)
@@ -128,20 +126,26 @@ def verify(request):
     )
 
 
-def _announce_code(request, report, plaintext):
-    """Say where the code went, and say so plainly if the mail server refused it."""
-    if services.email_failed(report):
+def _announce_code(request, report, plaintext, resend=False):
+    """Say where the code went, and say so plainly if it never left the server."""
+    if services.email_not_configured():
+        messages.error(request, services.EMAIL_NOT_CONFIGURED)
+    elif services.email_failed(report):
         messages.error(
             request,
-            "We saved your details, but the verification email could not be sent right now. "
-            "Your account stays inactive until it arrives - use 'Send the code again', or contact "
-            "the treasurer if the problem continues.",
+            "The verification email could not be sent right now. "
+            + (
+                "Please try 'Send the code again' in a moment, or contact the treasurer."
+                if resend
+                else "Your details are saved and your account stays inactive until it arrives - "
+                "use 'Send the code again', or contact the treasurer if the problem continues."
+            ),
         )
-        if settings.DEBUG:
-            messages.warning(request, f"Development mode - the code is {plaintext}.")
-        return
-    messages.success(request, "Almost done! " + _delivery_note(report))
+    else:
+        prefix = "A new code is on its way. " if resend else "Almost done! "
+        messages.success(request, prefix + _delivery_note(report))
     if settings.DEBUG:
+        # Never depend on the mail server to know what the code was.
         messages.warning(request, f"Development mode - the code is {plaintext}.")
 
 

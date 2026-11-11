@@ -5,6 +5,7 @@ All secrets and third-party credentials come from the .env file
 (python-decouple) - nothing sensitive is hard-coded here.
 """
 
+import logging
 from pathlib import Path
 
 import dj_database_url
@@ -160,25 +161,49 @@ CURRENCY_SYMBOL = "KSh"
 CURRENCY_CODE = "KES"
 
 # ------------------------------------------------------------------ email ----
-EMAIL_HOST = config("EMAIL_HOST", default="")
-if config("EMAIL_BACKEND", default=""):
-    EMAIL_BACKEND = config("EMAIL_BACKEND")
-elif EMAIL_HOST:
-    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-else:
-    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+# python-decouple prefers os.environ, so Render's Environment tab wins over any .env.
+# It hands the value back exactly as typed, though: a pasted "smtp.gmail.com" or a
+# trailing space is a hostname that cannot resolve. Trim before using it.
+def _env_text(name, default=""):
+    return str(config(name, default=default)).strip().strip("\"'").strip()
 
+
+def _env_flag(name, default):
+    raw = _env_text(name, str(default)).lower()
+    return default if not raw else raw in ("1", "true", "yes", "on", "t", "y")
+
+
+EMAIL_HOST = _env_text("EMAIL_HOST")
+EMAIL_BACKEND = _env_text("EMAIL_BACKEND") or (
+    "django.core.mail.backends.smtp.EmailBackend"
+    if EMAIL_HOST
+    else "django.core.mail.backends.console.EmailBackend"
+)
 EMAIL_HOST = EMAIL_HOST or "localhost"
-EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
-EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
-EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
+EMAIL_PORT = int(_env_text("EMAIL_PORT", "587") or 587)
+
+# 465 is implicit TLS (EMAIL_USE_SSL); 587 is STARTTLS (EMAIL_USE_TLS). Django's SMTP
+# backend raises if both are on, so SSL wins and the site stays up instead of failing
+# every send with a ValueError swallowed by the mail helper.
+EMAIL_USE_SSL = _env_flag("EMAIL_USE_SSL", False)
+EMAIL_USE_TLS = _env_flag("EMAIL_USE_TLS", not EMAIL_USE_SSL)
+if EMAIL_USE_SSL and EMAIL_USE_TLS:
+    EMAIL_USE_TLS = False
+    logging.getLogger(__name__).warning(
+        "EMAIL_USE_SSL and EMAIL_USE_TLS are both True - they are mutually exclusive. "
+        "Using SSL (port %s). Set EMAIL_USE_TLS=False to silence this warning.",
+        EMAIL_PORT,
+    )
+
+EMAIL_HOST_USER = _env_text("EMAIL_HOST_USER")
+# Never trimmed or rewritten: it is a secret and the server compares it byte for byte.
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
-DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="Kagan Owacho CBO <no-reply@kaganowacho.org>")
-ADMIN_INBOX_EMAIL = config("ADMIN_INBOX_EMAIL", default="admin1@kaganowacho.org")
+DEFAULT_FROM_EMAIL = _env_text("DEFAULT_FROM_EMAIL", "Kagan Owacho CBO <no-reply@kaganowacho.org>")
+ADMIN_INBOX_EMAIL = _env_text("ADMIN_INBOX_EMAIL", "admin1@kaganowacho.org")
 
 # A registration page must not sit waiting on a slow or unreachable mail server.
 # Django's SMTP backend reads this directly and gives up after the timeout.
-EMAIL_TIMEOUT = config("EMAIL_TIMEOUT", default=10, cast=int)
+EMAIL_TIMEOUT = int(_env_text("EMAIL_TIMEOUT", "10") or 10)
 
 # ------------------------------------------------------ project constants ----
 ORGANIZATION_NAME = config("ORGANIZATION_NAME", default="KAGAN OWACHO CBO")
@@ -233,6 +258,9 @@ APPEND_SLASH = True
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
-    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    # Render's Logs tab is the only place a live SMTP failure can be read on a free
+    # instance, so every line carries its level, time and origin.
+    "formatters": {"readable": {"format": "{levelname} {asctime} {name}: {message}", "style": "{"}},
+    "handlers": {"console": {"class": "logging.StreamHandler", "formatter": "readable"}},
     "root": {"handlers": ["console"], "level": "INFO"},
 }

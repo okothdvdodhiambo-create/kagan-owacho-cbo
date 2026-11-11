@@ -97,7 +97,7 @@ Render dashboard → New → Blueprint → (authorise GitHub) → pick okothdvdo
 | `MEDIA_STORAGE` | `database` — see "uploaded files" below |
 | `ADMIN1_EMAIL`, `ADMIN1_PASSWORD`, `ADMIN2_EMAIL`, `ADMIN2_PASSWORD` | **you type these**, `sync: false`, never stored in git |
 | `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS` | not needed: `config/settings.py` adds `RENDER_EXTERNAL_HOSTNAME` automatically |
-| `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USE_TLS`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `DEFAULT_FROM_EMAIL` | **you type these in the Environment tab** — see section 5. Without them a new member never receives their code |
+| `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USE_TLS` **or** `EMAIL_USE_SSL`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `DEFAULT_FROM_EMAIL` | **you type these in the Environment tab** — see section 7. Without them a new member never receives their code. 587 → TLS, 465 → SSL, never both |
 
 The build runs `pip install -r requirements.txt`, `collectstatic`, then `migrate`. That `migrate`
 fires `apps/core/signals.py` → `bootstrap_site`, which creates both administrator accounts from the
@@ -259,6 +259,7 @@ Gmail example (use an **App Password**, not your real password):
 EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
 EMAIL_USE_TLS=True
+EMAIL_USE_SSL=False
 EMAIL_HOST_USER=kaganowacho@gmail.com
 EMAIL_HOST_PASSWORD=<16-character app password>
 DEFAULT_FROM_EMAIL=Kagan Owacho CBO <kaganowacho@gmail.com>
@@ -266,20 +267,45 @@ ADMIN_INBOX_EMAIL=admin1@kaganowacho.org
 EMAIL_TIMEOUT=10
 ```
 
+`DEFAULT_FROM_EMAIL` must use the **same address** as `EMAIL_HOST_USER`. Gmail rewrites or refuses a
+sender it does not own, so a mismatched `From` can be accepted by SMTP and still never reach an inbox.
+
+**Port 465 instead of 587?** Set `EMAIL_PORT=465`, `EMAIL_USE_SSL=True` and `EMAIL_USE_TLS=False`.
+Exactly one of the two flags may be on: 465 is implicit TLS, 587 is STARTTLS. Setting
+`EMAIL_USE_SSL=True` on its own is enough — TLS then defaults to off. If both are ever `True` the site
+keeps SSL, switches TLS off and logs a warning instead of failing every send. Port 25 is blocked by
+Render; do not use it.
+
 `EMAIL_TIMEOUT` is how many seconds the registration page will wait on the mail server. A slow or
 unreachable server therefore delays the page briefly and then tells the member what happened instead
 of hanging the request; the account stays inactive until a code actually arrives.
 
-Test it from the server without sending a message through the site:
+Test it and get the exact error:
 
-```powershell
-python manage.py shell -c "from django.core.mail import send_mail; send_mail('Test','Kagan Owacho CBO test','noreply@example.org',['you@example.com'])"
+```bash
+python manage.py send_test_email you@example.com
 ```
 
+It prints the effective settings (the password is shown as *set, N characters*, never as a value),
+warns about anything it can see is wrong, then reports `ACCEPTED by host:port in N.NNs` or the
+exception type, the SMTP response code, the server's own words and the likely fix. It exits non-zero
+when nothing was delivered.
+
+Render's **free plan has no Shell tab**. There, read **your service → Logs** instead: every start
+prints an `Email configuration | …` line showing exactly which values the app received, and every
+send prints `Email sent …` or `Email FAILED … <exception>: <server response> | Fix: …`. Trigger a
+registration or a **Resend code** to produce one. If `EMAIL_HOST` shows `localhost` or the backend
+shows `console`, the variables never reached the app — check they are on the **web service** (not the
+database), spelled exactly, and that you deployed after saving them.
+
 If `EMAIL_HOST` is empty, e-mails are printed to the console. On a laptop that is convenient — while
-`DEBUG=True` the code is also echoed on the screen — but on Render nobody sees that log, so a member
-would never get their code. Until SMTP is set, verify new members by hand from the admin panel
-(**Members → Verify this member by hand**).
+`DEBUG=True` the code is also echoed on the screen — but on Render nobody receives anything. The
+registration page, the resend page and the admin panel's *Resend code* button all say plainly that
+the site cannot send e-mail yet rather than claiming a code is on its way. Until SMTP is set, verify
+new members by hand from the admin panel (**Members → Verify this member by hand**).
+
+Full walkthrough and an error-by-error table: README section 18,
+*When a verification e-mail does not arrive*.
 
 ---
 
@@ -349,7 +375,9 @@ Restore = copy both back and restart. Test a restore once; an untested backup is
 | `DisallowedHost at /` | The host you typed is not in `ALLOWED_HOSTS`. Add it (with and without `www`). |
 | CSS/images missing, 404 on `/static/...` | `collectstatic` was not run, or the host serves a different folder. Run it; on PythonAnywhere re-check the `/static/` mapping. |
 | Forms bounce back to the login page | The domain is missing from `CSRF_TRUSTED_ORIGINS`, or the site is behind a proxy that hides HTTPS. |
-| Verification code never arrives | `EMAIL_HOST` empty (it is printed in the log instead) or Gmail blocked the login — use an App Password. SMS is only an extra copy and only when `SMS_PROVIDER=africastalking` with its keys. |
+| Verification code never arrives | Read **Logs**: the `Email configuration` line shows what the app received, and each send writes `Email sent` or `Email FAILED` with the exact SMTP error. `localhost`/`console` means the variables never reached the app — re-check the Environment tab and deploy again. Otherwise run `python manage.py send_test_email you@example.com`, or see README section 18. SMS is only an extra copy and only when `SMS_PROVIDER=africastalking` with its keys. |
+| The page said the code was sent but nothing arrives | The console backend reports success without delivering. A live site now says it cannot send e-mail instead; if you still see this, `EMAIL_HOST` is set but `DEFAULT_FROM_EMAIL` is an address the provider does not own — make it match `EMAIL_HOST_USER`. |
+| Mail times out or the connection is closed | Port/flag mismatch: 587 needs `EMAIL_USE_TLS=True`, 465 needs `EMAIL_USE_SSL=True`, never both. Port 25 is blocked. |
 | Login says the account is not verified | Correct behaviour: the e-mailed code has not been entered yet. Use **Resend verification code** on the login page, or verify the member by hand in the admin panel once you have checked their ID. |
 | A new member is stuck on "Complete your membership" | Their account came from the old two-step flow and has no member details. Fill the form once; a code is e-mailed and the membership then confirms as usual. |
 | STK push says "not configured" | Daraja keys missing or `MPESA_ENV` does not match the keys (sandbox keys only work against sandbox). |

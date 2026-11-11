@@ -176,7 +176,15 @@ def _member_action(request, member):
             messages.error(request, f"Please wait {seconds} seconds before sending another code.")
             return redirect("admin_panel:member_detail", pk=member.pk)
         _code, plaintext, report = membership_services.issue_code(member)
-        if membership_services.email_failed(report):
+        if membership_services.email_not_configured():
+            message = (
+                f"No code was sent to {member.email}: this site has no mail server configured, so "
+                "codes are only printed to the server log. Set EMAIL_HOST, EMAIL_PORT, "
+                "EMAIL_HOST_USER, EMAIL_HOST_PASSWORD and DEFAULT_FROM_EMAIL in Render's "
+                "Environment tab and redeploy - or use 'Verify by hand' after checking their ID."
+            )
+            error = True
+        elif membership_services.email_failed(report):
             message = f"The code could not be emailed to {member.email}. Check the SMTP settings."
             error = True
         else:

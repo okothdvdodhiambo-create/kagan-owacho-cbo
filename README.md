@@ -179,7 +179,12 @@ What happens next:
    * While `EMAIL_HOST` is empty, and always while `DEBUG=True`, the code is also printed in the
      terminal, so you can finish the flow without a mail server.
    * If the mail server refuses the send, the page says so plainly and keeps the registration; it
-     never crashes, and the account simply stays inactive until a code arrives.
+     never crashes, and the account simply stays inactive until a code arrives. The same message
+     appears on **Resend verification code** and on the admin panel's *Resend code* button.
+   * If the site has **no mail server configured at all**, the page says that instead of pretending
+     a code is on its way. Every send — accepted or refused — is written to the log with the server,
+     the port, the TLS/SSL flags and the exact error. See
+     *[When a verification e-mail does not arrive](#18-when-a-verification-e-mail-does-not-arrive)*.
 3. On the right code they are logged in, the account is switched on, the membership is given the next
    number (`KOC-0001`, `KOC-0002`, …) and a confirmation e-mail is sent. Numbers never repeat, even if
    two people register in the same second.
@@ -321,7 +326,8 @@ Nothing in the code has a secret in it. Fill these in `.env`:
 | `DEBUG=False`, `ALLOWED_HOSTS=your-domain.com` | your domain | production security mode |
 | `CSRF_TRUSTED_ORIGINS=https://your-domain.com` | your domain | forms to submit over HTTPS |
 | `ADMIN1_*`, `ADMIN2_*` | you decide | the two committee logins — change the defaults |
-| `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USE_TLS`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `DEFAULT_FROM_EMAIL` | Gmail app password, or your hosting SMTP | **required for real sign-ups** — this is where the 6-digit verification code goes |
+| `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `DEFAULT_FROM_EMAIL` | Gmail app password, or your hosting SMTP | **required for real sign-ups** — this is where the 6-digit verification code goes |
+| `EMAIL_USE_TLS` / `EMAIL_USE_SSL` | port **587** → `EMAIL_USE_TLS=True`; port **465** → `EMAIL_USE_SSL=True` | exactly one of the two must be on, or the mail server closes the connection |
 | `EMAIL_TIMEOUT` | seconds, default `10` | how long the registration page waits on a slow mail server |
 | `AFRICASTALKING_USERNAME`, `AFRICASTALKING_API_KEY`, `AFRICASTALKING_SENDER_ID`, `SMS_PROVIDER=africastalking` | africastalking.com | optional extra SMS copy of the code (email alone is enough) |
 | `MPESA_CONSUMER_KEY`, `MPESA_CONSUMER_SECRET`, `MPESA_SHORTCODE`, `MPESA_PASSKEY`, `MPESA_ENV`, `MPESA_CALLBACK_URL` | developer.safaricom.co.ke (Daraja) | the "pay on my phone" prompt |
@@ -331,7 +337,9 @@ Nothing in the code has a secret in it. Fill these in `.env`:
 While any of these are empty the site still runs: e-mails and SMS are printed to the terminal, and
 the M-Pesa prompt falls back to the manual code form. That is fine for testing but **not for the
 public site**: with no `EMAIL_HOST` on Render, a person who registers never receives a code, so their
-account stays closed until the committee verifies them by hand from the admin panel.
+account stays closed until the committee verifies them by hand from the admin panel. The site now
+says so on the page instead of claiming the code was sent — see
+*[When a verification e-mail does not arrive](#18-when-a-verification-e-mail-does-not-arrive)*.
 
 ---
 
@@ -373,3 +381,101 @@ db.sqlite3                the database - delete it to start empty
 **Backup rule:** on a laptop, the whole site is `db.sqlite3` plus the `media/` folder. On Render
 (`MEDIA_STORAGE=database`) the photos live inside the database, so **one database dump is the entire
 site** - that is why the uploads were put there.
+
+---
+
+## 18. When a verification e-mail does not arrive
+
+Work through these in order. Each one is a real cause, and the site now reports enough to tell them
+apart.
+
+### 1. Read what the app actually received
+
+Every deploy and every start writes one line to the log:
+
+```
+INFO ... apps.communications.apps: Email configuration | EMAIL_BACKEND = django.core.mail.backends.smtp.EmailBackend | EMAIL_HOST = smtp.gmail.com | EMAIL_PORT = 587 | EMAIL_USE_TLS = True | EMAIL_USE_SSL = False | EMAIL_TIMEOUT = 10 seconds | EMAIL_HOST_USER = you@gmail.com | EMAIL_HOST_PASSWORD = set, 16 characters | DEFAULT_FROM_EMAIL = you@gmail.com | DEBUG = False
+```
+
+On Render open **your service → Logs**. The password is never printed — only whether it is set and
+how many characters it has. Warnings follow the line if something is obviously wrong (no credentials,
+port 465 without SSL, a `From` address the server does not own).
+
+* `EMAIL_HOST = localhost` or a `console` backend means **the variables never reached the app**. Go to
+  step 2. A console backend prints the code to the log and reports success, which is exactly how
+  "the page said it sent it" and "nothing arrived" can both be true. On a live site the registration
+  page now refuses to claim success in that case and tells the member to contact the treasurer.
+* The settings look right? Trigger a registration or a **Resend code**, then read the next mail line.
+  `Email sent … accepted=1 in 0.84s` means the server took it. `Email FAILED … SMTPAuthenticationError:
+  (535, …) | Fix: …` names the exception, the server's own words and the setting that fixes it.
+
+### 2. Check Render's Environment tab, then deploy again
+
+A running instance keeps the values it started with. After editing variables, start a deploy:
+**Manual Deploy → Deploy latest commit** (or push to `main` if Auto-Deploy is on).
+
+* Names must match exactly: `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`,
+  `DEFAULT_FROM_EMAIL`, plus `EMAIL_USE_TLS` **or** `EMAIL_USE_SSL`.
+* They belong to the **web service**, not the database, and not to a different service.
+* Do not wrap values in quotes. Stray quotes and trailing spaces are trimmed now, but a value pasted
+  into the wrong field is still wrong.
+* `DEBUG` must be `False` on the live site; `True` there also disables the security settings.
+* `render.yaml` lists the e-mail variables only as a comment — typing them in the dashboard is enough,
+  and a Blueprint re-apply will not erase them.
+
+### 3. Send a test message and read the exact error
+
+```bash
+python manage.py send_test_email you@example.com
+```
+
+It prints the effective configuration, any problems it can see before sending, then either
+`ACCEPTED by smtp.gmail.com:587 in 0.91s` or the exception type, the SMTP response code, the server's
+own sentence and a likely fix. It exits non-zero when nothing was delivered, so it can be scripted.
+The password is redacted even if a server echoes it back.
+
+Render's **free plan has no Shell tab**, so run this on a laptop with the same SMTP values, or use the
+Logs tab from step 1 — a failed registration writes the same detail there.
+
+### 4. Match the port to the flag
+
+| `EMAIL_PORT` | Set | Leave off | What happens if you get it wrong |
+|---|---|---|---|
+| `587` | `EMAIL_USE_TLS=True` | `EMAIL_USE_SSL=False` | the connection hangs and times out |
+| `465` | `EMAIL_USE_SSL=True` | `EMAIL_USE_TLS=False` | the server closes the connection immediately |
+| `25` | — | — | blocked by Render and most hosts; do not use it |
+
+Only one of the two may be on. If both are set to `True` the site keeps SSL, turns TLS off and logs a
+warning, rather than failing every send. Setting `EMAIL_USE_SSL=True` alone is enough — TLS then
+defaults to off.
+
+### 5. Gmail specifics
+
+* `EMAIL_HOST=smtp.gmail.com`, `EMAIL_PORT=587`, `EMAIL_USE_TLS=True` (or `465` with `EMAIL_USE_SSL=True`).
+* `EMAIL_HOST_PASSWORD` must be a **16-character App Password**, not the account password. Create one
+  under *Google Account → Security → 2-Step Verification → App passwords*; 2-Step Verification has to
+  be on first. Google removed the "less secure apps" switch, so an ordinary password always fails.
+* `EMAIL_HOST_USER` is the full address, and `DEFAULT_FROM_EMAIL` should be **that same address**.
+  Gmail rewrites or refuses a `From` it does not own, so the message can be accepted and still never
+  arrive. The default `no-reply@kaganowacho.org` is not a Gmail alias — change it.
+* If the App Password was ever shown in a chat, a screenshot or a commit, revoke it and make a new one.
+
+### 6. Accepted, but still not in the inbox
+
+`accepted=1` means the SMTP server took responsibility, not that the recipient saw it. Check the spam
+folder, check the recipient address for a typo, and check that `DEFAULT_FROM_EMAIL` is an address the
+sending provider allows. Some providers silently drop mail from a brand-new domain; sending the test
+message to a Gmail address and to a work address tells you which side is dropping it.
+
+### Quick error reference
+
+| What the log or the command says | What to change |
+|---|---|
+| `SMTPAuthenticationError … 535` | App Password, not the account password; `EMAIL_HOST_USER` is the full address |
+| `SMTPSenderRefused … 555` | `DEFAULT_FROM_EMAIL` must be the authenticated account or a verified alias |
+| `SMTPServerDisconnected` | TLS/SSL mismatch — 465 needs SSL, 587 needs TLS |
+| `TimeoutError` after `EMAIL_TIMEOUT` seconds | wrong port, or outbound SMTP blocked by the host |
+| `gaierror … Name or service not known` | typo, stray quotes or a trailing space in `EMAIL_HOST` |
+| `ConnectionRefusedError` | nothing listening on that host:port — check `EMAIL_PORT` |
+| `does not deliver mail` | `EMAIL_HOST` is empty; the console backend only prints to the log |
+| `EMAIL_HOST_USER or EMAIL_HOST_PASSWORD is empty` | Django skips login entirely, then the server refuses the message |

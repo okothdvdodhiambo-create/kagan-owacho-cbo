@@ -1,10 +1,12 @@
 """Account tests: logging in, throttling, verification resend, profile photos and password reset."""
 
 from datetime import timedelta
+from io import StringIO
+from unittest import mock
 
 from django.conf import settings
 from django.core import mail
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -161,6 +163,24 @@ class ResendCodeTests(TestCase):
     def test_the_page_is_reachable_from_a_link_on_login(self):
         response = self.client.get(reverse("accounts:resend_code"))
         self.assertContains(response, "Resend verification code")
+
+    def test_a_failing_mail_server_is_reported_on_the_resend_page(self):
+        self._clear_cooldown()
+        with mock.patch("django.core.mail.EmailMultiAlternatives.send", side_effect=OSError("smtp is down")):
+            response = self.client.post(reverse("accounts:resend_code"), {"email": "jane@example.com"}, follow=True)
+        notes = self._notes(response)
+        self.assertIn("could not send the email", notes)
+        self.assertNotIn("new 6-digit code", notes)
+
+    def test_a_live_site_without_smtp_does_not_promise_a_code(self):
+        self._clear_cooldown()
+        with override_settings(
+            DEBUG=False, EMAIL_BACKEND="django.core.mail.backends.console.EmailBackend"
+        ), mock.patch("sys.stdout", new=StringIO()):
+            response = self.client.post(reverse("accounts:resend_code"), {"email": "jane@example.com"}, follow=True)
+        notes = self._notes(response)
+        self.assertIn("cannot send email yet", notes)
+        self.assertNotIn("new 6-digit code", notes)
 
 
 class PasswordResetTests(TestCase):

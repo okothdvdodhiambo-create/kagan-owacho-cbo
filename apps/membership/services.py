@@ -112,6 +112,22 @@ def email_failed(report):
     return not (report or {}).get("email")
 
 
+# Shown when the site has no mail server configured. The console backend reports success,
+# so without this the member is told a code is on its way when nothing was ever sent.
+EMAIL_NOT_CONFIGURED = (
+    "Your details are saved, but this site cannot send email yet, so no verification code "
+    "reached you. Your account stays inactive until it does. Please contact the treasurer - "
+    "the email settings have to be completed before registration can finish."
+)
+
+
+def email_not_configured():
+    """True when a live site would print the code to its own log instead of sending it."""
+    from apps.communications.mail import email_only_prints_on_a_live_site
+
+    return email_only_prints_on_a_live_site()
+
+
 def current_code(member):
     """The newest code that has not expired and still has attempts left."""
     return (

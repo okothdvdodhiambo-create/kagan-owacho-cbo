@@ -54,8 +54,12 @@ services:
         sync: false
       # Optional integrations. Add them here, or later in the dashboard's Environment
       # tab, once you hold the keys - each one already has a working dev fallback:
-      #   EMAIL_HOST, EMAIL_PORT, EMAIL_USE_TLS, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD,
-      #   DEFAULT_FROM_EMAIL  -> real email instead of the console
+      #   EMAIL_HOST, EMAIL_PORT, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD,
+      #   DEFAULT_FROM_EMAIL -> real email instead of the console.
+      #   EMAIL_USE_TLS=True for port 587, or EMAIL_USE_SSL=True for port 465 -
+      #   exactly one of the two. Without EMAIL_HOST no verification code is ever
+      #   delivered: the free plan has no Shell, so read the "Email configuration"
+      #   line and the "Email sent"/"Email FAILED" lines in the service's Logs tab.
       #   SMS_PROVIDER=africastalking, AFRICASTALKING_USERNAME, AFRICASTALKING_API_KEY,
       #   AFRICASTALKING_SENDER_ID -> real SMS
       #   MPESA_ENV, MPESA_CONSUMER_KEY, MPESA_CONSUMER_SECRET, MPESA_SHORTCODE,
